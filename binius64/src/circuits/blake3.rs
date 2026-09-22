@@ -28,7 +28,7 @@ impl CircuitTrait for Blake3Circuit {
     fn build(params: Params, builder: &mut CircuitBuilder) -> Result<Self> {
         let len_bytes = determine_hash_max_bytes_from_args(params.max_len_bytes)?;
         let message: Vec<Wire> = (0..len_bytes.div_ceil(4))
-            .map(|_| builder.add_inout())
+            .map(|_| builder.add_witness())
             .collect();
         let computed_digest = blake3_fixed(builder, &message, len_bytes);
         let digest: [Wire; 8] = array::from_fn(|_| builder.add_inout());

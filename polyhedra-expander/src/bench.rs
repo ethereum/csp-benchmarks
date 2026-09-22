@@ -168,14 +168,19 @@ macro_rules! prepare_arm {
             .solve_witness_with_hints(&assignment, &EmptyHintCaller)
             .unwrap();
 
-        serialize_outputs(compile_result, witness)
+        serialize_outputs(compile_result, witness, OUTPUT_LEN)
     }};
 }
 
 pub fn serialize_outputs(
     compile_result: CompileResult<M31SingleConfig>,
     witness: Witness<M31SingleConfig>,
+    expected_public_inputs: usize,
 ) -> (Vec<u8>, Vec<u8>) {
+    assert_eq!(
+        witness.num_public_inputs_per_witness,
+        expected_public_inputs
+    );
     let mut circuit_bytes = Vec::new();
     compile_result
         .layered_circuit

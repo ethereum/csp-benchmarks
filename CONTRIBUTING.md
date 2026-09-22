@@ -6,6 +6,13 @@ Howdy! Usual good software engineering practices apply. Write comments. If your 
 
 - To keep benchmarks meaningful for practical deployments, we only include systems with at least 96 bits of security.
 
+### Benchmark statements
+
+- Hash benchmarks prove knowledge of a private preimage for a public digest.
+- Signature benchmarks prove knowledge of a private signature that is valid for a public key and a public message digest.
+
+If a system cannot separate public and private inputs, use the interface it provides and document what the verifier sees and checks.
+
 ## Reporting Issues and Review Findings
 
 This repository benchmarks external systems as submitted and integrated. We do not guarantee their correctness, security, or completeness, and we do not act as a full auditor. System maintainers remain responsible for their own codebases. If credible issues are identified, benchmark results may be annotated, revised, or excluded.

@@ -12,9 +12,9 @@ utils::define_benchmark_harness!(
     PLONKY2_BENCH_PROPERTIES,
     |_| None,
     sha256_prepare,
-    |(_, _, n_gates)| *n_gates,
-    |(circuit_data, pw, _)| { prove(circuit_data, pw.clone()) },
+    |(_, _, n_gates, _)| *n_gates,
+    |(circuit_data, pw, _, _)| { prove(circuit_data, pw.clone()) },
     verify_proof,
-    |(circuit_data, _pw, _)| compute_u32_preprocessing_size(circuit_data),
+    |(circuit_data, _pw, _, _)| compute_u32_preprocessing_size(circuit_data),
     compute_proof_size
 );
