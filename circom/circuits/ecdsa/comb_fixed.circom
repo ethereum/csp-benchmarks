@@ -45999,7 +45999,7 @@ template CombFixedBase() {
     component fold = BigAdd(64, 4);
     for (var j = 0; j < 4; j++) {
         fold.a[j] <== k[j];
-        fold.b[j] <== (1 - isOdd) * ordN[j];      // ordN e constanta => liniar
+        fold.b[j] <== (1 - isOdd) * ordN[j];      // ordN is a constant, so this stays linear
     }
 
     // ---------- 3. the bits of kOdd ----------
