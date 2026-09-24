@@ -19,6 +19,7 @@ dist/
 Dockerfile
 rust-project.json
 tmp/
+/params/
 *.json
 !*/bench_props.json
 !*/bench_flags.json
