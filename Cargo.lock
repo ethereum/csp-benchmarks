@@ -10479,12 +10479,28 @@ dependencies = [
  "env_logger 0.10.2",
  "itertools 0.13.0",
  "log",
+ "num",
  "plonky2",
+ "plonky2_ecdsa",
  "plonky2_u32",
  "rand 0.8.5",
  "sha2 0.10.9",
  "tiny-keccak",
  "utils 0.1.0",
+]
+
+[[package]]
+name = "plonky2_ecdsa"
+version = "0.1.0"
+source = "git+https://github.com/AnInsaneJimJam/plonky2-ecdsa?rev=0bf1a54c5d97a64917861596c08fd4fc0d4366b6#0bf1a54c5d97a64917861596c08fd4fc0d4366b6"
+dependencies = [
+ "anyhow",
+ "itertools 0.10.5",
+ "num",
+ "plonky2",
+ "plonky2_maybe_rayon",
+ "plonky2_u32",
+ "serde",
 ]
 
 [[package]]

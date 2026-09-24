@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use utils::harness::{AuditStatus, BenchProperties};
 
 pub mod bench;
+pub mod ecdsa;
 pub mod keccak256;
 pub mod sha256;
 
