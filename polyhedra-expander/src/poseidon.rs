@@ -1,4 +1,5 @@
 use circuit_std_rs::poseidon::poseidon_m31::*;
+use circuit_std_rs::poseidon::poseidon_u32::PoseidonParams;
 use circuit_std_rs::poseidon::utils::*;
 use circuit_std_rs::utils::register_hint;
 use expander_compiler::frontend::*;
@@ -44,8 +45,15 @@ macro_rules! prepare_arm {
             assignment.input[i] = M31::from(*input_val);
         }
 
+        let output = PoseidonParams::new(
+            POSEIDON_M31X16_RATE,
+            16,
+            POSEIDON_M31X16_FULL_ROUNDS,
+            POSEIDON_M31X16_PARTIAL_ROUNDS,
+        )
+        .hash_to_state(&inputs);
         for i in 0..OUTPUT_LEN {
-            assignment.output[i] = M31::from(0u32);
+            assignment.output[i] = M31::from(output[i]);
         }
 
         let mut hint_registry = HintRegistry::<M31>::new();
@@ -56,7 +64,7 @@ macro_rules! prepare_arm {
             .solve_witness_with_hints(&assignment, &mut hint_registry)
             .unwrap();
 
-        crate::bench::serialize_outputs(compile_result, witness)
+        crate::bench::serialize_outputs(compile_result, witness, OUTPUT_LEN)
     }};
 }
 

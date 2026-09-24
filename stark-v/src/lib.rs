@@ -139,9 +139,13 @@ pub fn prove_bench(prepared: &PreparedBench, _: &CompiledProgram) -> ProofResult
 }
 
 pub fn verify_bench(prepared: &PreparedBench, proof: &ProofResult, _: &CompiledProgram) {
-    prepared.vm.verify(&proof.proof).expect("verify failed");
+    let public_values = prepared.vm.verify(&proof.proof).expect("verify failed");
     assert_eq!(
-        proof.public_values, prepared.expected_digest,
+        public_values, proof.public_values,
+        "proof public values mismatch"
+    );
+    assert_eq!(
+        public_values, prepared.expected_digest,
         "public values do not match expected digest"
     );
 }

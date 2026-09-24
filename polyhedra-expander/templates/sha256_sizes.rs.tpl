@@ -1,7 +1,7 @@
 // Auto-generated. Do not edit.
 
 // BEGIN_DECL
-declare_circuit!(SHA256Circuit{{LEN}} { input: [Variable; {{LEN}}], output: [Variable; OUTPUT_LEN], });
+declare_circuit!(SHA256Circuit{{LEN}} { input: [Variable; {{LEN}}], output: [PublicVariable; OUTPUT_LEN], });
 impl Define<M31SingleConfig> for SHA256Circuit{{LEN}}<Variable> {
     fn define<Builder: RootAPI<M31SingleConfig>>(&self, api: &mut Builder) {
         let mut data = self.input.to_vec();
@@ -23,5 +23,4 @@ macro_rules! match_sha2_sizes {
 // BEGIN_MATCH_ARM
         {{LEN}} => $arm!(SHA256Circuit{{LEN}}, {{LEN}}),
 // END_MATCH_ARM
-
 

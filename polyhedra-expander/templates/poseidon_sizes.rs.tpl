@@ -3,7 +3,7 @@
 const OUTPUT_LEN: usize = 16;
 
 // BEGIN_DECL
-declare_circuit!(PoseidonCircuit{{LEN}} { input: [Variable; {{LEN}}], output: [Variable; OUTPUT_LEN], });
+declare_circuit!(PoseidonCircuit{{LEN}} { input: [Variable; {{LEN}}], output: [PublicVariable; OUTPUT_LEN], });
 impl Define<M31SingleConfig> for PoseidonCircuit{{LEN}}<Variable> {
     fn define<Builder: RootAPI<M31SingleConfig>>(&self, api: &mut Builder) {
         let mut data = self.input.to_vec();
@@ -25,5 +25,4 @@ macro_rules! match_poseidon_sizes {
 // BEGIN_MATCH_ARM
         {{LEN}} => $arm!(PoseidonCircuit{{LEN}}, {{LEN}}),
 // END_MATCH_ARM
-
 
