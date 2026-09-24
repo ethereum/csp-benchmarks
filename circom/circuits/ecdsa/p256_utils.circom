@@ -82,6 +82,56 @@ function p256_carry_signed(k, len, in) {
 }
 
 /*
+    a * b as a polynomial product without carries: out has ka + kb - 1
+    registers. The constraints are those of BigMultNoCarry: the identity
+    out(x) == a(x) * b(x) at the points x = 0 .. ka + kb - 2, which pins the
+    ka + kb - 1 coefficients of out as long as every register stays below the
+    field size (ma + mb <= 253).
+
+    Only witness generation differs. BigMultNoCarry evaluates each point as
+    i ** j, which the witness generator computes as a full field
+    exponentiation per term; with eight-limb operands that dominated witness
+    time. Here the powers of i are accumulated by multiplication. The
+    constraint system is the same.
+*/
+template P256MultNoCarry(ma, mb, ka, kb) {
+    assert(ma + mb <= 253);
+    signal input a[ka];
+    signal input b[kb];
+    signal output out[ka + kb - 1];
+
+    var prod_val[ka + kb - 1];
+    for (var i = 0; i < ka + kb - 1; i++) { prod_val[i] = 0; }
+    for (var i = 0; i < ka; i++) {
+        for (var j = 0; j < kb; j++) {
+            prod_val[i + j] += a[i] * b[j];
+        }
+    }
+    for (var i = 0; i < ka + kb - 1; i++) {
+        out[i] <-- prod_val[i];
+    }
+
+    var a_poly[ka + kb - 1];
+    var b_poly[ka + kb - 1];
+    var out_poly[ka + kb - 1];
+    for (var i = 0; i < ka + kb - 1; i++) {
+        out_poly[i] = 0;
+        a_poly[i] = 0;
+        b_poly[i] = 0;
+        var pw = 1;
+        for (var j = 0; j < ka + kb - 1; j++) {
+            out_poly[i] = out_poly[i] + out[j] * pw;
+            if (j < ka) { a_poly[i] = a_poly[i] + a[j] * pw; }
+            if (j < kb) { b_poly[i] = b_poly[i] + b[j] * pw; }
+            pw = pw * i;
+        }
+    }
+    for (var i = 0; i < ka + kb - 1; i++) {
+        out_poly[i] === a_poly[i] * b_poly[i];
+    }
+}
+
+/*
     Constrains a value of `regs` 32-bit-scale registers, each possibly negative
     and below 2^m in absolute value, to be 0 mod p.
 
@@ -123,7 +173,7 @@ template P256CheckModPIsZero(regs, m, shift, kq, M, len) {
         qRange[i].in <== q[i];
     }
 
-    component qp = BigMultNoCarry(32, 32, 32, kq, 8);
+    component qp = P256MultNoCarry(32, 32, kq, 8);
     for (var i = 0; i < kq; i++) { qp.a[i] <== q[i]; }
     for (var i = 0; i < 8; i++) { qp.b[i] <== p[i]; }
 

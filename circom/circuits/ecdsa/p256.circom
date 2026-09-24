@@ -7,7 +7,7 @@ pragma circom 2.0.2;
     modulo p and through the a = -3 terms, which are linear and cost no
     constraints.
 
-    Products go through BigMultNoCarry: 8 x 8 limbs give 15 registers below
+    Products go through P256MultNoCarry: 8 x 8 limbs give 15 registers below
     2^67, and a further factor gives 22. Squares and x1 * x2 are computed once
     and reused across the terms that share them.
 */
@@ -23,7 +23,7 @@ template P256Mul() {
     signal input a[8];
     signal input b[8];
     signal output out[15];
-    component m = BigMultNoCarry(32, 32, 32, 8, 8);
+    component m = P256MultNoCarry(32, 32, 8, 8);
     for (var i = 0; i < 8; i++) { m.a[i] <== a[i]; m.b[i] <== b[i]; }
     for (var i = 0; i < 15; i++) { out[i] <== m.out[i]; }
 }
@@ -33,7 +33,7 @@ template P256Mul3() {
     signal input a[15];
     signal input b[8];
     signal output out[22];
-    component m = BigMultNoCarry(32, 67, 32, 15, 8);
+    component m = P256MultNoCarry(67, 32, 15, 8);
     for (var i = 0; i < 15; i++) { m.a[i] <== a[i]; }
     for (var i = 0; i < 8; i++) { m.b[i] <== b[i]; }
     for (var i = 0; i < 22; i++) { out[i] <== m.out[i]; }
