@@ -64,6 +64,9 @@ generator is 57 MiB of generated C++ — roughly three times the largest artifac
 other circuit ships its `.cpp` and `.dat` in tree and needs nothing installed. The first build
 after a clean checkout spends about five minutes in circom before the C++ compile starts.
 
+The secp256r1 (P-256) ECDSA circuit, `ecdsa_p256_32`, is built the same way, so a clean build
+compiles both generators. Its benchmark needs the `circom-ecdsa-p256-bench` feature.
+
 ## Run the benchmarks
 
 The default benchmarks include SHA-256, Keccak-256, Poseidon, and secp256k1 ECDSA.

@@ -229,11 +229,13 @@ jobs:
         id: ecdsa_witness_cache
         uses: actions/cache@v4
         with:
-          # Only the two generated files: the same directory also holds the
+          # Only the generated files: the same directories also hold the
           # downloaded .zkey, which must not be cached or restored over.
           path: |
             circom/circuits/ecdsa/ecdsa_32/ecdsa_32.cpp
             circom/circuits/ecdsa/ecdsa_32/ecdsa_32.dat
+            circom/circuits/ecdsa/ecdsa_p256_32/ecdsa_p256_32.cpp
+            circom/circuits/ecdsa/ecdsa_p256_32/ecdsa_p256_32.dat
           key: ${{ runner.os }}-${{ runner.arch }}-ecdsa-witness-circom-${{ steps.circom_setup.outputs.version }}-${{ hashFiles('circom/build.rs', 'circom/circuits/ecdsa/**/*.circom', 'circom/circomlib/circuits/**/*.circom') }}
 
       # Preserve the restored mtimes used by the native build cache. The exact
@@ -416,11 +418,13 @@ jobs:
         id: ecdsa_witness_cache
         uses: actions/cache@v4
         with:
-          # Only the two generated files: the same directory also holds the
+          # Only the generated files: the same directories also hold the
           # downloaded .zkey, which must not be cached or restored over.
           path: |
             circom/circuits/ecdsa/ecdsa_32/ecdsa_32.cpp
             circom/circuits/ecdsa/ecdsa_32/ecdsa_32.dat
+            circom/circuits/ecdsa/ecdsa_p256_32/ecdsa_p256_32.cpp
+            circom/circuits/ecdsa/ecdsa_p256_32/ecdsa_p256_32.dat
           key: ${{ runner.os }}-${{ runner.arch }}-ecdsa-witness-circom-${{ steps.circom_setup.outputs.version }}-${{ hashFiles('circom/build.rs', 'circom/circuits/ecdsa/**/*.circom', 'circom/circomlib/circuits/**/*.circom') }}
 
       # Preserve the restored mtimes used by the native build cache. The exact
