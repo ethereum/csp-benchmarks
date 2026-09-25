@@ -1,5 +1,7 @@
 pub mod ecdsa;
 pub mod ecdsa_input;
+pub mod ecdsa_p256;
+pub mod ecdsa_p256_input;
 pub mod keccak;
 pub mod poseidon;
 pub mod sha256;
@@ -19,6 +21,19 @@ use witnesscalc_adapter::parse_witness_to_bigints;
 /// witness generator overruns: the width-12 comb table alone holds 1.88 MB of
 /// locals in a single frame, and the signature checks add another 1.1 MB on top.
 const WITNESS_STACK: usize = 8 * 1024 * 1024;
+
+/// Runs `f` on a thread with `WITNESS_STACK`, as `prove` runs the witness
+/// generator. Tests that call an ECDSA generator directly would otherwise run it
+/// on the 2 MiB test thread and abort the whole test binary.
+#[cfg(test)]
+pub(crate) fn on_witness_stack<R: Send + 'static>(f: impl FnOnce() -> R + Send + 'static) -> R {
+    std::thread::Builder::new()
+        .stack_size(WITNESS_STACK)
+        .spawn(f)
+        .expect("Failed to spawn the witness thread")
+        .join()
+        .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+}
 
 pub const CIRCOM_BENCH_PROPERTIES: BenchProperties = BenchProperties {
     proving_system: Cow::Borrowed("Groth16"),

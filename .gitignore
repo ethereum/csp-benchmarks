@@ -30,6 +30,8 @@ third_party/
 // generated C++, about three times the largest artifact otherwise kept here.
 circom/circuits/ecdsa/ecdsa_32/ecdsa_32.cpp
 circom/circuits/ecdsa/ecdsa_32/ecdsa_32.dat
+circom/circuits/ecdsa/ecdsa_p256_32/ecdsa_p256_32.cpp
+circom/circuits/ecdsa/ecdsa_p256_32/ecdsa_p256_32.dat
 *.r1cs
 *.sym
 *.wtns
