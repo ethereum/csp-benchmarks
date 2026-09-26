@@ -140,10 +140,21 @@ template P256MultNoCarry(ma, mb, ka, kb) {
     limbs; q * p - reduced must then carry to zero, with every register below
     2^(M - 1). shift, kq, M and len (the limbs the witness-time division needs)
     are derived per caller from the exact coefficient sums, not bit ceilings.
+
+    The carries are propagated over groups of g registers. Joining g registers
+    of 32-bit scale into one of 32g-bit scale is linear, so it costs nothing.
+    A joined register is below 2^(M - 1) * (1 + 2^-32 + 2^-64 + ...) times
+    2^(32(g - 1)), so below 2^(MG - 1) with MG = M + 32(g - 1) + 1. Each carry
+    then takes MG + 3 - 32g = M - 28 bits, one more than with single
+    registers, and there are g times fewer of them. CheckCarryToZero needs
+    MG + 3 <= 253 to stay clear of the field.
+    This is the "grouped carry propagation" of rot256's (Mathias Hall-Andersen)
+    zk.golf secp256k1 submission; no code was copied.
 */
-template P256CheckModPIsZero(regs, m, shift, kq, M, len) {
+template P256CheckModPIsZero(regs, m, shift, kq, M, len, g) {
     assert(regs <= 22);
-    assert(M + 3 <= 253);
+    var MG = M + 32 * (g - 1) + 1;
+    assert(MG + 3 <= 253);
 
     signal input in[regs];
 
@@ -177,13 +188,24 @@ template P256CheckModPIsZero(regs, m, shift, kq, M, len) {
     for (var i = 0; i < kq; i++) { qp.a[i] <== q[i]; }
     for (var i = 0; i < 8; i++) { qp.b[i] <== p[i]; }
 
-    component zero = CheckCarryToZero(32, M, kq + 7);
-    for (var i = 0; i < kq + 7; i++) {
+    var K = kq + 7;
+    signal diff[K];
+    for (var i = 0; i < K; i++) {
         if (i < 8) {
-            zero.in[i] <== qp.out[i] - reduced[i];
+            diff[i] <== qp.out[i] - reduced[i];
         } else {
-            zero.in[i] <== qp.out[i];
+            diff[i] <== qp.out[i];
         }
+    }
+
+    var KG = (K + g - 1) \ g;
+    component zero = CheckCarryToZero(32 * g, MG, KG);
+    for (var j = 0; j < KG; j++) {
+        var joined = 0;
+        for (var t = 0; t < g; t++) {
+            if (j * g + t < K) { joined += diff[j * g + t] * (1 << (32 * t)); }
+        }
+        zero.in[j] <== joined;
     }
 }
 
@@ -191,14 +213,14 @@ template P256CheckModPIsZero(regs, m, shift, kq, M, len) {
 // the tangent of a doubling. Register growth 6 bits.
 template P256CheckCubicModPIsZero104() {
     signal input in[22];
-    component c = P256CheckModPIsZero(22, 104, 78, 3, 112, 12);
+    component c = P256CheckModPIsZero(22, 104, 78, 3, 112, 12, 5);
     for (var i = 0; i < 22; i++) { c.in[i] <== in[i]; }
 }
 
 // Products of three field elements, |in| < 2^102: the curve equation.
 template P256CheckCubicModPIsZero102() {
     signal input in[22];
-    component c = P256CheckModPIsZero(22, 102, 76, 3, 110, 12);
+    component c = P256CheckModPIsZero(22, 102, 76, 3, 110, 12, 5);
     for (var i = 0; i < 22; i++) { c.in[i] <== in[i]; }
 }
 
@@ -206,7 +228,7 @@ template P256CheckCubicModPIsZero102() {
 // Register growth 4 bits.
 template P256CheckQuadraticModPIsZero69() {
     signal input in[15];
-    component c = P256CheckModPIsZero(15, 69, 40, 2, 74, 11);
+    component c = P256CheckModPIsZero(15, 69, 40, 2, 74, 11, 6);
     for (var i = 0; i < 15; i++) { c.in[i] <== in[i]; }
 }
 
