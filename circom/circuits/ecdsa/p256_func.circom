@@ -267,8 +267,17 @@ function p256_double_add_func(n, k, x1, y1, x2, y2) {
     return out;
 }
 
-// 2*(x1, y1) on y^2 = x^3 - 3x + b: lambda = (3*x1^2 - 3) / (2*y1), in either layout
+// 2*(x1, y1) on y^2 = x^3 - 3x + b, in either layout
 function p256_double_func(n, k, x1, y1) {
+    var t[3][100] = p256_double_slope_func(n, k, x1, y1);
+    var out[2][100];
+    for (var i = 0; i < 100; i++) { out[0][i] = t[1][i]; out[1][i] = t[2][i]; }
+    return out;
+}
+
+// 2*(x1, y1) with its tangent slope: [lambda, x3, y3], with
+// lambda = (3*x1^2 - 3) / (2*y1), in either layout
+function p256_double_slope_func(n, k, x1, y1) {
     var p[100] = get_p256_prime(n, k);
     var ax[100] = p256_load(n, k, x1, p);
     var ay[100] = p256_load(n, k, y1, p);
@@ -293,8 +302,8 @@ function p256_double_func(n, k, x1, y1) {
     var ldx[100] = prod_mod_p(n, k, lambda, dx3, p);
     var y3[100] = sm_sub_mod(n, k, ldx, ay, p);
 
-    var out[2][100];
-    for (var i = 0; i < 100; i++) { out[0][i] = 0; out[1][i] = 0; }
-    for (var i = 0; i < k; i++) { out[0][i] = x3[i]; out[1][i] = y3[i]; }
+    var out[3][100];
+    for (var i = 0; i < 100; i++) { out[0][i] = 0; out[1][i] = 0; out[2][i] = 0; }
+    for (var i = 0; i < k; i++) { out[0][i] = lambda[i]; out[1][i] = x3[i]; out[2][i] = y3[i]; }
     return out;
 }

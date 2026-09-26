@@ -2,10 +2,11 @@ pragma circom 2.0.2;
 
 /*
     Point operations on secp256r1 (P-256), y^2 = x^3 - 3x + b, on points of
-    eight 32-bit limbs per coordinate. The constraint shapes are those of the
-    circom-ecdsa secp256k1 templates; the curve enters through the reduction
-    modulo p and through the a = -3 terms, which are linear and cost no
-    constraints.
+    eight 32-bit limbs per coordinate. P256AddUnequal and P256PointOnCurve keep
+    the constraint shapes of the circom-ecdsa secp256k1 templates; P256Double
+    and P256DoubleAddStrict witness their slopes and use quadratic checks only.
+    The curve enters through the reduction modulo p and through the a = -3
+    terms, which are linear and cost no constraints.
 
     Products go through P256MultNoCarry: 8 x 8 limbs give 15 registers below
     2^67, and a further factor gives 22. Squares and x1 * x2 are computed once
@@ -137,49 +138,6 @@ template P256PointOnLine() {
     }
 }
 
-// The tangent at (x1, y1) passes through (x3, -y3):
-// 2*y1*(y1 + y3) == (3*x1^2 + a)*(x1 - x3), i.e. with a = -3
-// 2y1^2 + 2y1y3 - 3x1^3 + 3x1^2x3 + 3x1 - 3x3 == 0 mod p
-// Each side below 3 * 48 * 2^96 + 2^70 < 2^104.
-template P256PointOnTangent() {
-    signal input x1[8];
-    signal input y1[8];
-    signal input x3[8];
-    signal input y3[8];
-
-    component y12 = P256Mul();
-    component y1y3 = P256Mul();
-    component x1sq = P256Mul();
-    for (var i = 0; i < 8; i++) {
-        y12.a[i] <== y1[i]; y12.b[i] <== y1[i];
-        y1y3.a[i] <== y1[i]; y1y3.b[i] <== y3[i];
-        x1sq.a[i] <== x1[i]; x1sq.b[i] <== x1[i];
-    }
-    component x13 = P256Mul3();
-    component x12x3 = P256Mul3();
-    for (var i = 0; i < 15; i++) {
-        x13.a[i] <== x1sq.out[i];
-        x12x3.a[i] <== x1sq.out[i];
-    }
-    for (var i = 0; i < 8; i++) {
-        x13.b[i] <== x1[i];
-        x12x3.b[i] <== x3[i];
-    }
-
-    component zeroCheck = P256CheckCubicModPIsZero104();
-    for (var i = 0; i < 22; i++) {
-        if (i < 8) {
-            zeroCheck.in[i] <== 2 * y12.out[i] + 2 * y1y3.out[i] - 3 * x13.out[i]
-                + 3 * x12x3.out[i] + 3 * x1[i] - 3 * x3[i];
-        } else if (i < 15) {
-            zeroCheck.in[i] <== 2 * y12.out[i] + 2 * y1y3.out[i] - 3 * x13.out[i]
-                + 3 * x12x3.out[i];
-        } else {
-            zeroCheck.in[i] <== -3 * x13.out[i] + 3 * x12x3.out[i];
-        }
-    }
-}
-
 // x^3 - 3x + b - y^2 == 0 mod p. Each side below 48 * 2^96 + 2^70 < 2^102.
 template P256PointOnCurve() {
     signal input x[8];
@@ -257,7 +215,22 @@ template P256AddUnequal() {
     }
 }
 
-// 2 * in. P-256 has prime order, so no finite point has y == 0.
+/*
+    2 * in, with the tangent slope witnessed. Three quadratic checks hold mod p:
+
+        (1) 2 * y1 * lambda == 3 * x1^2 - 3
+        (2) x3 == lambda^2 - 2 * x1
+        (3) y3 == lambda * (x1 - x3) - y1
+
+    in must be on the curve. P-256 has prime order, so no finite point has
+    y1 == 0: (1) fixes lambda, and (2) and (3) fix the output. Eliminating
+    lambda instead gives a cubic check that the tangent's second intersection
+    also satisfies, which needs an on-curve check and x3 != x1 on the output;
+    the witnessed slope needs neither.
+
+    In (1), 2 * lambda * y1 stays below 2^68 and 3 * x1^2 below 3 * 2^67, so
+    every register stays below 2^69.
+*/
 template P256Double() {
     signal input in[2][8];
     signal output out[2][8];
@@ -269,23 +242,19 @@ template P256Double() {
         y1[i] = in[1][i];
     }
 
-    var tmp[2][100] = p256_double_func(32, 8, x1, y1);
+    var tmp[3][100] = p256_double_slope_func(32, 8, x1, y1);
+    signal lambda[8];
     for (var i = 0; i < 8; i++) {
-        out[0][i] <-- tmp[0][i];
-        out[1][i] <-- tmp[1][i];
+        lambda[i] <-- tmp[0][i];
+        out[0][i] <-- tmp[1][i];
+        out[1][i] <-- tmp[2][i];
     }
 
-    component onTangent = P256PointOnTangent();
-    component onCurve = P256PointOnCurve();
+    component lambdaRange[8];
     for (var i = 0; i < 8; i++) {
-        onTangent.x1[i] <== in[0][i];
-        onTangent.y1[i] <== in[1][i];
-        onTangent.x3[i] <== out[0][i];
-        onTangent.y3[i] <== out[1][i];
-        onCurve.x[i] <== out[0][i];
-        onCurve.y[i] <== out[1][i];
+        lambdaRange[i] = Num2Bits(32);
+        lambdaRange[i].in <== lambda[i];
     }
-
     component xRange = CheckInRangeP256();
     component yRange = CheckInRangeP256();
     for (var i = 0; i < 8; i++) {
@@ -293,14 +262,36 @@ template P256Double() {
         yRange.in[i] <== out[1][i];
     }
 
-    // The tangent meets the curve at in (twice) and at -out; x3 != x1 picks
-    // the latter.
-    component sameX = BigIsEqual(8);
+    component ly1 = P256Mul();
+    component x1sq = P256Mul();
+    component lsq = P256Mul();
+    component lx1 = P256Mul();
+    component lx3 = P256Mul();
     for (var i = 0; i < 8; i++) {
-        sameX.in[0][i] <== out[0][i];
-        sameX.in[1][i] <== in[0][i];
+        ly1.a[i] <== lambda[i]; ly1.b[i] <== in[1][i];
+        x1sq.a[i] <== in[0][i]; x1sq.b[i] <== in[0][i];
+        lsq.a[i] <== lambda[i]; lsq.b[i] <== lambda[i];
+        lx1.a[i] <== lambda[i]; lx1.b[i] <== in[0][i];
+        lx3.a[i] <== lambda[i]; lx3.b[i] <== out[0][i];
     }
-    sameX.out === 0;
+
+    component tangent = P256CheckQuadraticModPIsZero69();
+    component chord = P256CheckQuadraticModPIsZero69();
+    component line = P256CheckQuadraticModPIsZero69();
+    for (var i = 0; i < 15; i++) {
+        if (i == 0) {
+            tangent.in[i] <== 2 * ly1.out[i] - 3 * x1sq.out[i] + 3;
+        } else {
+            tangent.in[i] <== 2 * ly1.out[i] - 3 * x1sq.out[i];
+        }
+        if (i < 8) {
+            chord.in[i] <== lsq.out[i] - 2 * in[0][i] - out[0][i];
+            line.in[i] <== lx3.out[i] - lx1.out[i] + out[1][i] + in[1][i];
+        } else {
+            chord.in[i] <== lsq.out[i];
+            line.in[i] <== lx3.out[i] - lx1.out[i];
+        }
+    }
 }
 
 /*
