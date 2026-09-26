@@ -338,3 +338,124 @@ template P256AddStrict() {
         }
     }
 }
+
+/*
+    2*a + b in one step, as (a + b) + a, without the y of a + b
+    (Eisentraeger, Lauter and Montgomery). It replaces a P256Double followed
+    by a P256AddStrict. Following the public description of rot256's
+    (Mathias Hall-Andersen) zk.golf secp256k1 submission ("ELM fused 2R+T");
+    no code was copied.
+
+    With (x1, y1) = a, (x2, y2) = b and (x4, y4) = out, the slopes lambda1,
+    lambda2 and x3 = x(a + b) are witnessed, and five quadratic checks hold
+    mod p:
+
+        (1) lambda1 * (x2 - x1) == y2 - y1
+        (2) x3 == lambda1^2 - x1 - x2
+        (3) (lambda1 + lambda2) * (x3 - x1) == -2 * y1
+        (4) x4 == lambda2^2 - x1 - x3
+        (5) y4 == lambda2 * (x1 - x4) - y1
+
+    x1 != x2 is checked, as in P256AddStrict, so (1) fixes lambda1 and (2)
+    fixes x3. If x3 == x1, (3) demands y1 == 0, which no point on P-256 has,
+    so there is no witness; otherwise (3) fixes lambda2, and (4) and (5) fix
+    the output. a must be on the curve and canonical, b canonical.
+
+    Each check sums at most two products of 15 registers below 2^67 on each
+    side of the sign, plus 32-bit limbs, so every register stays below 2^69.
+*/
+template P256DoubleAddStrict() {
+    signal input a[2][8];
+    signal input b[2][8];
+    signal output out[2][8];
+
+    var x1[8];
+    var y1[8];
+    var x2[8];
+    var y2[8];
+    for (var i = 0; i < 8; i++) {
+        x1[i] = a[0][i];
+        y1[i] = a[1][i];
+        x2[i] = b[0][i];
+        y2[i] = b[1][i];
+    }
+
+    component same = BigIsEqual(8);
+    for (var j = 0; j < 8; j++) {
+        same.in[0][j] <== a[0][j];
+        same.in[1][j] <== b[0][j];
+    }
+    same.out === 0;
+
+    var tmp[5][100] = p256_double_add_func(32, 8, x1, y1, x2, y2);
+    signal l1[8];
+    signal x3[8];
+    signal l2[8];
+    for (var i = 0; i < 8; i++) {
+        l1[i] <-- tmp[0][i];
+        x3[i] <-- tmp[1][i];
+        l2[i] <-- tmp[2][i];
+        out[0][i] <-- tmp[3][i];
+        out[1][i] <-- tmp[4][i];
+    }
+
+    // The intermediate values only need 32-bit limbs for the register bounds;
+    // the output is kept canonical for the distinct-x guard of the next step.
+    component l1Range[8];
+    component x3Range[8];
+    component l2Range[8];
+    for (var i = 0; i < 8; i++) {
+        l1Range[i] = Num2Bits(32);
+        l1Range[i].in <== l1[i];
+        x3Range[i] = Num2Bits(32);
+        x3Range[i].in <== x3[i];
+        l2Range[i] = Num2Bits(32);
+        l2Range[i].in <== l2[i];
+    }
+    component xRange = CheckInRangeP256();
+    component yRange = CheckInRangeP256();
+    for (var i = 0; i < 8; i++) {
+        xRange.in[i] <== out[0][i];
+        yRange.in[i] <== out[1][i];
+    }
+
+    component l1x2 = P256Mul();
+    component l1x1 = P256Mul();
+    component l1sq = P256Mul();
+    component l1x3 = P256Mul();
+    component l2x3 = P256Mul();
+    component l2x1 = P256Mul();
+    component l2sq = P256Mul();
+    component l2x4 = P256Mul();
+    for (var i = 0; i < 8; i++) {
+        l1x2.a[i] <== l1[i]; l1x2.b[i] <== b[0][i];
+        l1x1.a[i] <== l1[i]; l1x1.b[i] <== a[0][i];
+        l1sq.a[i] <== l1[i]; l1sq.b[i] <== l1[i];
+        l1x3.a[i] <== l1[i]; l1x3.b[i] <== x3[i];
+        l2x3.a[i] <== l2[i]; l2x3.b[i] <== x3[i];
+        l2x1.a[i] <== l2[i]; l2x1.b[i] <== a[0][i];
+        l2sq.a[i] <== l2[i]; l2sq.b[i] <== l2[i];
+        l2x4.a[i] <== l2[i]; l2x4.b[i] <== out[0][i];
+    }
+
+    component slope1 = P256CheckQuadraticModPIsZero69();
+    component chord1 = P256CheckQuadraticModPIsZero69();
+    component slope2 = P256CheckQuadraticModPIsZero69();
+    component chord2 = P256CheckQuadraticModPIsZero69();
+    component line2 = P256CheckQuadraticModPIsZero69();
+    for (var i = 0; i < 15; i++) {
+        if (i < 8) {
+            slope1.in[i] <== l1x2.out[i] - l1x1.out[i] - b[1][i] + a[1][i];
+            chord1.in[i] <== l1sq.out[i] - a[0][i] - b[0][i] - x3[i];
+            slope2.in[i] <== l1x3.out[i] - l1x1.out[i] + l2x3.out[i] - l2x1.out[i] + 2 * a[1][i];
+            chord2.in[i] <== l2sq.out[i] - a[0][i] - x3[i] - out[0][i];
+            line2.in[i] <== l2x4.out[i] - l2x1.out[i] + out[1][i] + a[1][i];
+        } else {
+            slope1.in[i] <== l1x2.out[i] - l1x1.out[i];
+            chord1.in[i] <== l1sq.out[i];
+            slope2.in[i] <== l1x3.out[i] - l1x1.out[i] + l2x3.out[i] - l2x1.out[i];
+            chord2.in[i] <== l2sq.out[i];
+            line2.in[i] <== l2x4.out[i] - l2x1.out[i];
+        }
+    }
+}
