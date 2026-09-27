@@ -141,6 +141,13 @@ template P256MultNoCarry(ma, mb, ka, kb) {
     2^(M - 1). shift, kq, M and len (the limbs the witness-time division needs)
     are derived per caller from the exact coefficient sums, not bit ceilings.
 
+    q is range-checked on qbits bits, the length of the largest quotient those
+    sums allow, rather than on kq full limbs: the top limb gets
+    qbits - 32 (kq - 1) bits. A narrower range only removes choices from the
+    prover, and the carry bound M already holds for any q below 2^(32 kq).
+    Following the public description of patchgravity's zk.golf secp256k1
+    submissions ("site-specific quotient and carry ranges"); no code was copied.
+
     The carries are propagated over groups of g registers. Joining g registers
     of 32-bit scale into one of 32g-bit scale is linear, so it costs nothing.
     A joined register is below 2^(M - 1) * (1 + 2^-32 + 2^-64 + ...) times
@@ -151,8 +158,9 @@ template P256MultNoCarry(ma, mb, ka, kb) {
     This is the "grouped carry propagation" of rot256's (Mathias Hall-Andersen)
     zk.golf secp256k1 submission; no code was copied.
 */
-template P256CheckModPIsZero(regs, m, shift, kq, M, len, g) {
+template P256CheckModPIsZero(regs, m, shift, kq, M, len, g, qbits) {
     assert(regs <= 22);
+    assert(qbits > 32 * (kq - 1) && qbits <= 32 * kq);
     var MG = M + 32 * (g - 1) + 1;
     assert(MG + 3 <= 253);
 
@@ -180,7 +188,7 @@ template P256CheckModPIsZero(regs, m, shift, kq, M, len, g) {
 
     component qRange[kq];
     for (var i = 0; i < kq; i++) {
-        qRange[i] = Num2Bits(32);
+        qRange[i] = Num2Bits(i < kq - 1 ? 32 : qbits - 32 * (kq - 1));
         qRange[i].in <== q[i];
     }
 
@@ -213,14 +221,14 @@ template P256CheckModPIsZero(regs, m, shift, kq, M, len, g) {
 // the tangent of a doubling. Register growth 6 bits.
 template P256CheckCubicModPIsZero104() {
     signal input in[22];
-    component c = P256CheckModPIsZero(22, 104, 78, 3, 112, 12, 5);
+    component c = P256CheckModPIsZero(22, 104, 78, 3, 112, 12, 5, 79);
     for (var i = 0; i < 22; i++) { c.in[i] <== in[i]; }
 }
 
 // Products of three field elements, |in| < 2^102: the curve equation.
 template P256CheckCubicModPIsZero102() {
     signal input in[22];
-    component c = P256CheckModPIsZero(22, 102, 76, 3, 110, 12, 5);
+    component c = P256CheckModPIsZero(22, 102, 76, 3, 110, 12, 5, 77);
     for (var i = 0; i < 22; i++) { c.in[i] <== in[i]; }
 }
 
@@ -228,7 +236,7 @@ template P256CheckCubicModPIsZero102() {
 // Register growth 4 bits.
 template P256CheckQuadraticModPIsZero69() {
     signal input in[15];
-    component c = P256CheckModPIsZero(15, 69, 40, 2, 74, 11, 6);
+    component c = P256CheckModPIsZero(15, 69, 40, 2, 74, 11, 6, 41);
     for (var i = 0; i < 15; i++) { c.in[i] <== in[i]; }
 }
 
