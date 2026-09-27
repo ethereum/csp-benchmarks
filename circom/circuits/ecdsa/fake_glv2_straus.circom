@@ -12,8 +12,9 @@ pragma circom 2.0.2;
 
         T[d0 + 4*d1] = D + d0*A0 + d1*A1,   d0, d1 in {0, 1, 2, 3}
 
-    Each step computes acc = 2*(2*acc) + T[d]: one doubling, then the second
-    doubling and the addition fused into one P256DoubleAddStrict.
+    Each step computes acc = 2*(2*acc) + T[d] in one P256QuadAddStrict: the
+    second doubling and the addition fused, and the y of the first doubling
+    never witnessed.
     After nbits/2 steps the accumulator holds
     ((4^(nbits/2) - 1)/3)*D + [e0]A0 + [e1]A1. That sum must be O, so the
     terminal check is a plain equality against the constant
@@ -133,10 +134,9 @@ template FakeGLV2StrausLoop(nbits) {
         }
     }
 
-    // ---------- the loop: nsteps steps, one double + one double-add each ----------
+    // ---------- the loop: nsteps steps, one 4*acc + T[d] each ----------
     component sel[nsteps];
-    component dbl[nsteps - 1];
-    component dadd[nsteps - 1];
+    component qadd[nsteps - 1];
     signal acc[nsteps][2][8];
 
     for (var i = nsteps - 1; i >= 0; i--) {
@@ -162,28 +162,24 @@ template FakeGLV2StrausLoop(nbits) {
                 }
             }
         } else {
-            dbl[i] = P256Double();
-            dadd[i] = P256DoubleAddStrict();
+            qadd[i] = P256QuadAddStrict();
             for (var c = 0; c < 2; c++) {
                 for (var j = 0; j < 8; j++) {
-                    dbl[i].in[c][j] <== acc[i + 1][c][j];
+                    qadd[i].a[c][j] <== acc[i + 1][c][j];
+                    qadd[i].b[c][j] <== sel[i].out[c * 8 + j];
                 }
             }
             for (var c = 0; c < 2; c++) {
                 for (var j = 0; j < 8; j++) {
-                    dadd[i].a[c][j] <== dbl[i].out[c][j];
-                    dadd[i].b[c][j] <== sel[i].out[c * 8 + j];
-                }
-            }
-            for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 8; j++) {
-                    acc[i][c][j] <== dadd[i].out[c][j];
+                    acc[i][c][j] <== qadd[i].out[c][j];
                 }
             }
         }
     }
 
     // ---------- terminal assertion: acc == ((2^nbits - 1)/3)*D ----------
+    // The accumulator is only range-checked to 32-bit limbs, not canonical;
+    // comparing its limbs against the canonical C pins it all the same.
     var Cx[8] = get_glv2_target_x();
     var Cy[8] = get_glv2_target_y();
     for (var j = 0; j < 8; j++) {
