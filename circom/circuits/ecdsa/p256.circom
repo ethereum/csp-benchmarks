@@ -331,8 +331,7 @@ template P256AddStrict() {
 }
 
 /*
-    4*r + b in one step. It replaces a P256Double followed by a doubling and
-    an addition.
+    4*r + b in one step. It replaces two doublings and an addition.
 
     The doubling d = 2*r is given by its tangent slope lambda0 and its x
     coordinate xD. The y of d enters the rest only linearly, so it is never
@@ -372,8 +371,10 @@ template P256AddStrict() {
     step reads either representative the same way. A caller that compares the
     output limb by limb against a canonical constant pins the value anyway.
 
-    Each side of a check sums at most four products of 15 registers below
-    2^67 = 8 * 2^64, plus 32-bit limbs, so every register stays below 2^69.
+    A product register sums at most eight products of 32-bit limbs, so it is
+    at most 8 * (2^32 - 1)^2 = 2^67 - 2^36 + 8. The widest side, in (3), sums
+    four products and two 32-bit limbs, at most 2^69 - 2^38 + 2^33 + 30; every
+    other side sums less, so every register stays below 2^69.
 */
 template P256QuadAddStrict() {
     signal input a[2][8];
