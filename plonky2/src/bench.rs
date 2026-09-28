@@ -1,11 +1,12 @@
 use plonky2::{
     field::goldilocks_field::GoldilocksField,
+    field::types::Field,
     hash::poseidon::PoseidonHash,
     iop::witness::{PartialWitness, WitnessWrite},
     plonk::{
         circuit_builder::CircuitBuilder,
         circuit_data::{CircuitConfig, CircuitData, VerifierCircuitData},
-        config::{GenericConfig, PoseidonGoldilocksConfig},
+        config::{GenericConfig, GenericHashOut, Hasher, PoseidonGoldilocksConfig},
         proof::ProofWithPublicInputs,
     },
     util::serialization::Write,
@@ -18,6 +19,7 @@ use plonky2_u32::gates::arithmetic_u32::{U32GateSerializer, U32GeneratorSerializ
 const D: usize = 2;
 type C = PoseidonGoldilocksConfig;
 type F = <C as GenericConfig<D>>::F;
+pub type Prepared = (CircuitData<F, C, D>, PartialWitness<F>, usize, Vec<F>);
 
 pub fn verify(data: &VerifierCircuitData<F, C, D>, proof: ProofWithPublicInputs<F, C, D>) {
     data.verify(proof).unwrap()
@@ -30,7 +32,7 @@ pub fn prove(
     data.prove(pw).unwrap()
 }
 
-pub fn sha256_prepare(input_size: usize) -> (CircuitData<F, C, D>, PartialWitness<F>, usize) {
+pub fn sha256_prepare(input_size: usize) -> Prepared {
     let (msg, hash) = utils::generate_sha256_input(input_size);
 
     let msg_bits = array_to_bits(&msg);
@@ -48,22 +50,29 @@ pub fn sha256_prepare(input_size: usize) -> (CircuitData<F, C, D>, PartialWitnes
     }
 
     let expected_res = array_to_bits(hash.as_slice());
-    for (i, expected_res_bit) in expected_res.iter().enumerate() {
-        if *expected_res_bit {
-            builder.assert_one(targets.digest[i].target);
-        } else {
-            builder.assert_zero(targets.digest[i].target);
-        }
-    }
+    let digest_targets: Vec<_> = targets.digest.iter().map(|bit| bit.target).collect();
+    builder.register_public_inputs(&digest_targets);
+    let expected_public_inputs = expected_res
+        .iter()
+        .map(|bit| F::from_canonical_u64(u64::from(*bit)))
+        .collect::<Vec<_>>();
 
     let n_gates = builder.num_gates();
-    (builder.build::<C>(), pw, n_gates)
+    let circuit_data = builder.build::<C>();
+    assert_eq!(
+        circuit_data.common.num_public_inputs,
+        expected_public_inputs.len()
+    );
+    (circuit_data, pw, n_gates, expected_public_inputs)
 }
 
-pub fn poseidon_prepare(input_size: usize) -> (CircuitData<F, C, D>, PartialWitness<F>, usize) {
-    use plonky2::field::types::Field;
-
+pub fn poseidon_prepare(input_size: usize) -> Prepared {
     let inputs = utils::generate_poseidon_input_goldilocks(input_size);
+    let input_fields: Vec<_> = inputs
+        .iter()
+        .map(|input| F::from_canonical_u64(*input))
+        .collect();
+    let expected_public_inputs = PoseidonHash::hash_no_pad(&input_fields).to_vec();
     let mut builder = CircuitBuilder::<F, D>::new(CircuitConfig::standard_recursion_zk_config());
 
     let input_targets: Vec<_> = (0..input_size)
@@ -75,15 +84,19 @@ pub fn poseidon_prepare(input_size: usize) -> (CircuitData<F, C, D>, PartialWitn
 
     let mut pw = PartialWitness::new();
     for (i, target) in input_targets.iter().enumerate() {
-        pw.set_target(*target, F::from_canonical_u64(inputs[i]))
-            .unwrap();
+        pw.set_target(*target, input_fields[i]).unwrap();
     }
 
     let n_gates = builder.num_gates();
-    (builder.build::<C>(), pw, n_gates)
+    let circuit_data = builder.build::<C>();
+    assert_eq!(
+        circuit_data.common.num_public_inputs,
+        expected_public_inputs.len()
+    );
+    (circuit_data, pw, n_gates, expected_public_inputs)
 }
 
-pub fn keccak256_prepare(input_size: usize) -> (CircuitData<F, C, D>, PartialWitness<F>, usize) {
+pub fn keccak256_prepare(input_size: usize) -> Prepared {
     let (msg, hash) = utils::generate_keccak_input(input_size);
 
     let msg_bits = array_to_bits_lsb(&msg);
@@ -106,16 +119,20 @@ pub fn keccak256_prepare(input_size: usize) -> (CircuitData<F, C, D>, PartialWit
     }
 
     let expected_res = array_to_bits_lsb(hash.as_slice());
-    for (i, expected_res_bit) in expected_res.iter().enumerate() {
-        if *expected_res_bit {
-            builder.assert_one(targets[i].target);
-        } else {
-            builder.assert_zero(targets[i].target);
-        }
-    }
+    let digest_targets: Vec<_> = targets.iter().map(|bit| bit.target).collect();
+    builder.register_public_inputs(&digest_targets);
+    let expected_public_inputs = expected_res
+        .iter()
+        .map(|bit| F::from_canonical_u64(u64::from(*bit)))
+        .collect::<Vec<_>>();
 
     let n_gates = builder.num_gates();
-    (builder.build::<C>(), pw, n_gates)
+    let circuit_data = builder.build::<C>();
+    assert_eq!(
+        circuit_data.common.num_public_inputs,
+        expected_public_inputs.len()
+    );
+    (circuit_data, pw, n_gates, expected_public_inputs)
 }
 
 pub fn compute_u32_preprocessing_size(circuit_data: &CircuitData<F, C, D>) -> usize {
@@ -135,9 +152,13 @@ pub fn compute_u32_preprocessing_size(circuit_data: &CircuitData<F, C, D>) -> us
 }
 
 pub fn verify_proof(
-    (circuit_data, _pw, _): &(CircuitData<F, C, D>, PartialWitness<F>, usize),
+    (circuit_data, _pw, _, expected_public_inputs): &Prepared,
     proof: &ProofWithPublicInputs<GoldilocksField, C, D>,
 ) {
+    assert_eq!(
+        proof.public_inputs, *expected_public_inputs,
+        "digest mismatch"
+    );
     let verifier_data = circuit_data.verifier_data();
     verify(&verifier_data, proof.clone());
 }

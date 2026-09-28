@@ -15,6 +15,6 @@ fn main() {
 }
 
 fn keccak_mem(input_size: usize) {
-    let (data, pw, _) = keccak256_prepare(input_size);
+    let (data, pw, _, _) = keccak256_prepare(input_size);
     let _proof = prove(&data, pw);
 }

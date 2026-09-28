@@ -11,6 +11,6 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let (circuit_data, pw, _) = poseidon_prepare(args.input_size);
+    let (circuit_data, pw, _, _) = poseidon_prepare(args.input_size);
     let _ = prove(&circuit_data, pw);
 }

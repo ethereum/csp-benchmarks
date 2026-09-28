@@ -14,10 +14,12 @@ sha2 = { workspace = true }
 env_logger = { workspace = true }
 rand = { workspace = true }
 plonky2_u32 = { git = "https://github.com/alxkzmn/plonky2-u32", rev = "fcabb02" }
+plonky2_ecdsa = { git = "https://github.com/AnInsaneJimJam/plonky2-ecdsa", rev = "0bf1a54c5d97a64917861596c08fd4fc0d4366b6" }
 criterion = { workspace = true }
 utils = { workspace = true }
 clap = { workspace = true }
 tiny-keccak = { version = "2.0.2", features = ["keccak"] }
+num = "0.4"
 
 [[bench]]
 name = "sha256"
@@ -31,6 +33,10 @@ harness = false
 name = "keccak"
 harness = false
 
+[[bench]]
+name = "ecdsa"
+harness = false
+
 [[bin]]
 name = "sha256_mem"
 path = "src/bin/sha256_mem.rs"
@@ -42,3 +48,7 @@ path = "src/bin/poseidon_mem.rs"
 [[bin]]
 name = "keccak_mem"
 path = "src/bin/keccak_mem.rs"
+
+[[bin]]
+name = "ecdsa_mem_plonky2"
+path = "src/bin/ecdsa_mem.rs"

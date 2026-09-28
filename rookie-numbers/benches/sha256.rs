@@ -1,4 +1,7 @@
 //! SHA256 benchmark using Rookie Numbers prover.
+//!
+//! The pinned verifier receives only values returned by `prove_sha256`; this benchmark does not
+//! supply a public digest to the verifier.
 
 use rookie_numbers::{
     secure_pcs_config, MAX_PREPROCESSED_LOG_SIZE, ROOKIE_NUMBERS_BENCH_PROPERTIES,

@@ -15,10 +15,10 @@ utils::define_benchmark_harness!(
     PLONKY2_BENCH_PROPERTIES,
     |_| Some(utils::bench::Acceleration::Precompile),
     poseidon_prepare,
-    |(_, _, n_gates)| *n_gates,
-    |(circuit_data, pw, _)| { prove(circuit_data, pw.clone()) },
+    |(_, _, n_gates, _)| *n_gates,
+    |(circuit_data, pw, _, _)| { prove(circuit_data, pw.clone()) },
     verify_proof,
-    |(circuit_data, _pw, _)| {
+    |(circuit_data, _pw, _, _)| {
         let gate_serializer = DefaultGateSerializer;
         let common_data_size = circuit_data
             .common

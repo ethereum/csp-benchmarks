@@ -40,7 +40,7 @@ impl CircuitTrait for KeccakCircuit {
 
         let digest: [Wire; N_WORDS_PER_DIGEST] = std::array::from_fn(|_| builder.add_inout());
         let n_words = max_len_bytes.div_ceil(8);
-        let message = ByteVec::new_inout(builder, n_words);
+        let message = ByteVec::new_witness(builder, n_words);
         let computed_digest = keccak256_varlen(builder, &message);
         for index in 0..digest.len() {
             builder.assert_eq(

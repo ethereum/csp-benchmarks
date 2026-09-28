@@ -2,7 +2,7 @@ use sha256::sha256_var;
 
 global INPUT_SIZE: u32 = 2048;
 
-fn main(input: [u8; INPUT_SIZE], input_len: u32, result: [u8; 32]) {
+fn main(input: [u8; INPUT_SIZE], input_len: u32, result: pub [u8; 32]) {
     let digest = sha256_var(input, input_len);
     assert(digest == result);
 }

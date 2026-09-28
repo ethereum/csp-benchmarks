@@ -22,27 +22,21 @@ utils::define_benchmark_harness!(
         MPIConfig::prover_new(Some(universe), Some(world))
     ),
     |(circuit_bytes, witness_bytes), (universe, world)| {
-        let (_, proof) = prove(
+        prove(
             circuit_bytes,
             witness_bytes,
             MPIConfig::prover_new(Some(universe), Some(world)),
-        );
-        proof
+        )
     },
-    |(circuit_bytes, witness_bytes), proof, (universe, world)| {
-        let (claimed, _) = prove(
-            circuit_bytes,
-            witness_bytes,
-            MPIConfig::prover_new(Some(universe), Some(world)),
-        );
+    |(circuit_bytes, witness_bytes), (claimed, proof), (universe, world)| {
         verify(
             circuit_bytes,
             witness_bytes,
             proof,
-            &claimed,
+            claimed,
             MPIConfig::prover_new(Some(universe), Some(world)),
         );
     },
     |(circuit_bytes, _), _| { circuit_bytes.len() },
-    |proof, _shared| proof.bytes.len()
+    |(_, proof), _shared| proof.bytes.len()
 );

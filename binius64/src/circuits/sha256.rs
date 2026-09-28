@@ -43,7 +43,7 @@ impl CircuitTrait for Sha256Circuit {
         let max_len_bytes = determine_hash_max_bytes_from_args(params.max_len_bytes)?;
         let circuit = if params.exact_len {
             let message: Vec<Wire> = (0..max_len_bytes.div_ceil(4))
-                .map(|_| builder.add_inout())
+                .map(|_| builder.add_witness())
                 .collect();
             let computed_digest = sha256_fixed(builder, &message, max_len_bytes);
             let digest: [Wire; 8] = array::from_fn(|_| builder.add_inout());
@@ -60,7 +60,7 @@ impl CircuitTrait for Sha256Circuit {
                 len_bytes: max_len_bytes,
             }
         } else {
-            let message = ByteVec::new_inout(builder, max_len_bytes.div_ceil(8));
+            let message = ByteVec::new_witness(builder, max_len_bytes.div_ceil(8));
             let computed_digest = sha256_varlen(builder, &message);
             let digest: [Wire; 4] = array::from_fn(|_| builder.add_inout());
             for index in 0..digest.len() {

@@ -81,13 +81,29 @@ pub fn prove(
     // Taken from circuit.prover_load_witness_file
     circuit.load_witness_bytes(witness_bytes, &mpi_config, true, false);
 
-    let proof = expander_prove::<M31SingleConfig>(&mut circuit, mpi_config.clone());
+    let (claimed_v, mut proof) =
+        expander_prove::<M31SingleConfig>(&mut circuit, mpi_config.clone());
+
+    if mpi_config.is_root() {
+        // Expander places the public inputs at the start of the returned proof, but its verifier
+        // reconstructs them from the witness and expects the proof to start with the commitment.
+        // The verifier still appends the public inputs to its transcript before reading the proof.
+        let mut public_input_prefix = Vec::new();
+        for input in &circuit.public_input {
+            input.serialize_into(&mut public_input_prefix).unwrap();
+        }
+        assert!(
+            proof.bytes.starts_with(&public_input_prefix),
+            "Expander proof does not start with the serialized public inputs"
+        );
+        proof.bytes.drain(..public_input_prefix.len());
+    }
 
     // Clean up shared memory
     circuit.discard_control_of_shared_mem();
     mpi_config.free_shared_mem(&mut window);
 
-    proof
+    (claimed_v, proof)
 }
 
 pub fn get_constraints(
@@ -126,8 +142,10 @@ pub fn verify(
     witness_bytes: &[u8],
     proof: &Proof,
     claimed_v: &M31Ext3,
-    mpi_config: MPIConfig<'_>,
+    prover_mpi_config: MPIConfig<'_>,
 ) {
+    let verifier_mpi_config = MPIConfig::verifier_new(prover_mpi_config.world_size);
+
     // Taken from Circuit::verifier_load_circuit
     let rc: RecursiveCircuit<M31x1Config> =
         ExpSerde::deserialize_from(Cursor::new(circuit_bytes)).unwrap();
@@ -135,9 +153,9 @@ pub fn verify(
     circuit.pre_process_gkr();
 
     // Load witness from bytes for verifier
-    circuit.load_witness_bytes(witness_bytes, &mpi_config, false, false);
+    circuit.load_witness_bytes(witness_bytes, &verifier_mpi_config, false, false);
 
-    let verifier = Verifier::<M31SingleConfig>::new(mpi_config);
+    let verifier = Verifier::<M31SingleConfig>::new(verifier_mpi_config);
     assert!(expander_verify::<M31SingleConfig>(
         &mut circuit,
         verifier.mpi_config,
@@ -168,14 +186,19 @@ macro_rules! prepare_arm {
             .solve_witness_with_hints(&assignment, &EmptyHintCaller)
             .unwrap();
 
-        serialize_outputs(compile_result, witness)
+        serialize_outputs(compile_result, witness, OUTPUT_LEN)
     }};
 }
 
 pub fn serialize_outputs(
     compile_result: CompileResult<M31SingleConfig>,
     witness: Witness<M31SingleConfig>,
+    expected_public_inputs: usize,
 ) -> (Vec<u8>, Vec<u8>) {
+    assert_eq!(
+        witness.num_public_inputs_per_witness,
+        expected_public_inputs
+    );
     let mut circuit_bytes = Vec::new();
     compile_result
         .layered_circuit
