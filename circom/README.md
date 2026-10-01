@@ -64,8 +64,7 @@ generator is 57 MiB of generated C++ — roughly three times the largest artifac
 other circuit ships its `.cpp` and `.dat` in tree and needs nothing installed. The first build
 after a clean checkout spends about five minutes in circom before the C++ compile starts.
 
-The secp256r1 (P-256) ECDSA circuit, `ecdsa_p256_32`, is built the same way, so a clean build
-compiles both generators. Its benchmark needs the `circom-ecdsa-p256-bench` feature.
+The secp256r1 (P-256) ECDSA circuit, `ecdsa_p256_32`, is built the same way, so a clean build compiles both generators. Its complete group operations handle doubling, inverse points, and infinity throughout the Straus table and accumulator. Circom 2.2.3 with `--O2` produces 299,183 nonlinear constraints and 20 public inputs. Its benchmark needs the `circom-ecdsa-p256-bench` feature and a matching zkey. [P-256 validation](tests/P256.md) describes the group operations, soundness argument, and focused R1CS regressions.
 
 ## Run the benchmarks
 

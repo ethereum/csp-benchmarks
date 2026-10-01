@@ -7,27 +7,29 @@ pragma circom 2.0.2;
     magnitudes, with the signs already folded into the bases. Both scalars are
     read two bits at a time, which gives the loop the same shape as the
     4-dimensional one on secp256k1: a 16-entry table and 64 steps. The table
-    is offset by a sentinel D, so no entry and no intermediate accumulator is
-    the point at infinity:
+    is offset by a sentinel D. Entries and accumulators carry an explicit
+    infinity flag and use complete group operations:
 
         T[d0 + 4*d1] = D + d0*A0 + d1*A1,   d0, d1 in {0, 1, 2, 3}
 
-    Each step computes acc = 2*(2*acc) + T[d] in one P256QuadAddStrict: the
-    second doubling and the addition fused, and the y of the first doubling
-    never witnessed.
+    Each step computes acc = 4*acc + T[d] in P256QuadAddComplete.
+    The first doubling's x coordinate is canonical. The loop omits its y
+    coordinate and the y of the fused intermediate addition. Accumulator
+    coordinates are bounded 32-bit limbs interpreted modulo p.
     After nbits/2 steps the accumulator holds
-    ((4^(nbits/2) - 1)/3)*D + [e0]A0 + [e1]A1. That sum must be O, so the
-    terminal check is a plain equality against the constant
+    ((4^(nbits/2) - 1)/3)*D + [e0]A0 + [e1]A1. The relation
+    [e0]A0 + [e1]A1 == O is enforced by equality against the constant
     C = ((2^nbits - 1)/3)*D.
 
     Points are eight 32-bit limbs per coordinate.
 
     The technique follows the public description of rot256's (Mathias
     Hall-Andersen) submission to the zk.golf secp256k1 scalar multiplication
-    challenge, reduced to two dimensions. No code was copied.
+    challenge, reduced to two dimensions:
+    https://zk.golf/submissions/899ee03a-0e6c-4154-8571-648c30353840
 */
 
-include "./p256.circom";
+include "./p256_complete.circom";
 include "../../circomlib/circuits/mux4.circom";
 
 // D = [12345678901234567890]G, the table sentinel.
@@ -101,16 +103,16 @@ template FakeGLV2StrausLoop(nbits) {
     var Dx[8] = get_glv2_sentinel_x();
     var Dy[8] = get_glv2_sentinel_y();
 
-    // The distinct-x guards compare limbs, so the bases must be canonical.
-    component baseRange[2];
-    for (var b = 0; b < 2; b++) {
-        baseRange[b] = CheckInRangeP256();
-        for (var j = 0; j < 8; j++) { baseRange[b].in[j] <== A[b][0][j]; }
-    }
+    // The caller supplies Boolean bits and canonical finite curve points.
+    // Num2Bits in FakeGLV2ScalarMulVerify constrains the bits; its caller
+    // checks both coordinates before sign selection. Table addition compares
+    // canonical x and y limbs to distinguish doubling from cancellation.
 
     // ---------- the table: 16 entries, 15 additions ----------
     // T[4*d1] = T[4*(d1 - 1)] + A1; otherwise T[d] = T[d - 1] + A0
     signal T[16][2][8];
+    signal TInf[16];
+    TInf[0] <== 0;
     for (var j = 0; j < 8; j++) {
         T[0][0][j] <== Dx[j];
         T[0][1][j] <== Dy[j];
@@ -120,13 +122,16 @@ template FakeGLV2StrausLoop(nbits) {
         var prev = d - 1;
         var base = 0;
         if (d % 4 == 0) { prev = d - 4; base = 1; }
-        tab[d] = P256AddStrict();
+        tab[d] = P256AddComplete();
+        tab[d].aInf <== TInf[prev];
+        tab[d].bInf <== 0;
         for (var c = 0; c < 2; c++) {
             for (var j = 0; j < 8; j++) {
                 tab[d].a[c][j] <== T[prev][c][j];
                 tab[d].b[c][j] <== A[base][c][j];
             }
         }
+        TInf[d] <== tab[d].outInf;
         for (var c = 0; c < 2; c++) {
             for (var j = 0; j < 8; j++) {
                 T[d][c][j] <== tab[d].out[c][j];
@@ -138,10 +143,12 @@ template FakeGLV2StrausLoop(nbits) {
     component sel[nsteps];
     component qadd[nsteps - 1];
     signal acc[nsteps][2][8];
+    signal accInf[nsteps];
 
     for (var i = nsteps - 1; i >= 0; i--) {
-        sel[i] = MultiMux4(16);
+        sel[i] = MultiMux4(17);
         for (var d = 0; d < 16; d++) {
+            sel[i].c[16][d] <== TInf[d];
             for (var c = 0; c < 2; c++) {
                 for (var j = 0; j < 8; j++) {
                     sel[i].c[c * 8 + j][d] <== T[d][c][j];
@@ -156,19 +163,23 @@ template FakeGLV2StrausLoop(nbits) {
         sel[i].s[3] <== bits[1][2 * i + 1];
 
         if (i == nsteps - 1) {
+            accInf[i] <== sel[i].out[16];
             for (var c = 0; c < 2; c++) {
                 for (var j = 0; j < 8; j++) {
                     acc[i][c][j] <== sel[i].out[c * 8 + j];
                 }
             }
         } else {
-            qadd[i] = P256QuadAddStrict();
+            qadd[i] = P256QuadAddComplete();
+            qadd[i].aInf <== accInf[i + 1];
+            qadd[i].bInf <== sel[i].out[16];
             for (var c = 0; c < 2; c++) {
                 for (var j = 0; j < 8; j++) {
                     qadd[i].a[c][j] <== acc[i + 1][c][j];
                     qadd[i].b[c][j] <== sel[i].out[c * 8 + j];
                 }
             }
+            accInf[i] <== qadd[i].outInf;
             for (var c = 0; c < 2; c++) {
                 for (var j = 0; j < 8; j++) {
                     acc[i][c][j] <== qadd[i].out[c][j];
@@ -178,8 +189,8 @@ template FakeGLV2StrausLoop(nbits) {
     }
 
     // ---------- terminal assertion: acc == ((2^nbits - 1)/3)*D ----------
-    // The accumulator is only range-checked to 32-bit limbs, not canonical;
-    // comparing its limbs against the canonical C pins it all the same.
+    // The finite canonical target fixes both coordinates and the flag.
+    accInf[0] === 0;
     var Cx[8] = get_glv2_target_x();
     var Cy[8] = get_glv2_target_y();
     for (var j = 0; j < 8; j++) {

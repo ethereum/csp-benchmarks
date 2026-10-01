@@ -28,11 +28,11 @@ pragma circom 2.0.2;
     The hint (u, v) is an input of this template, not of the circuit: whoever
     instantiates it computes the hint at witness generation time.
 
-    Preconditions, enforced by the caller: P is on the curve, which also
-    rules out the point at infinity (it has no affine form, and (0, 0) is
-    not on P-256), and s != 0. With s = 0 the relation forces u = 0, and
-    [v]Q == O has no solution for v != 0 and Q on the curve, so the check
-    cannot be satisfied.
+    Preconditions, enforced by the caller: P and Q have canonical
+    coordinates, P is on the curve, and s != 0. The curve check rules out
+    infinity, which has no affine form; (0, 0) is not on P-256. With s = 0
+    the relation forces u = 0, and [v]Q == O has no solution for v != 0 and
+    Q on the curve, so the check cannot be satisfied.
 */
 
 include "./p256.circom";

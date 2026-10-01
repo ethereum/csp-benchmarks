@@ -60,7 +60,6 @@ path = "src/bin/ecdsa_mem.rs"
 [[bin]]
 name = "ecdsa_p256_mem_circom"
 path = "src/bin/ecdsa_p256_mem.rs"
-required-features = ["circom-ecdsa-p256-bench"]
 
 [[bin]]
 name = "keccak_mem_circom"

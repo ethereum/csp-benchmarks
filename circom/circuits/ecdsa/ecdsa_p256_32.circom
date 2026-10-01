@@ -6,7 +6,7 @@ pragma circom 2.0.2;
 // witnesscalc-adapter requires the directory, the .cpp and the .dat to share
 // the circuit's name.
 //
-// Compiled with --O2: 685,914 nonlinear constraints, 685,914 total.
+// Compiled with --O2: 299,183 nonlinear constraints, 299,183 total (Circom 2.2.3).
 
 include "./ecdsa_p256_comb_verify.circom";
 

@@ -214,59 +214,6 @@ function p256_addunequal_func(n, k, x1, y1, x2, y2) {
     return out;
 }
 
-// 2*(x1, y1) + (x2, y2) as (P + Q) + P, without the y of P + Q. Returns the
-// two slopes and x of P + Q along with the result:
-// [lambda1, x3, lambda2, x4, y4], with
-//   lambda1 = (y2 - y1) / (x2 - x1),   x3 = lambda1^2 - x1 - x2,
-//   lambda2 = -lambda1 - 2*y1 / (x3 - x1),
-//   x4 = lambda2^2 - x1 - x3,   y4 = lambda2*(x1 - x4) - y1.
-function p256_double_add_func(n, k, x1, y1, x2, y2) {
-    var p[100] = get_p256_prime(n, k);
-    var ax[100] = p256_load(n, k, x1, p);
-    var ay[100] = p256_load(n, k, y1, p);
-    var bx[100] = p256_load(n, k, x2, p);
-    var by[100] = p256_load(n, k, y2, p);
-
-    var dy[100] = sm_sub_mod(n, k, by, ay, p);
-    var dx[100] = sm_sub_mod(n, k, bx, ax, p);
-    var dxInv[100] = mod_inv(n, k, dx, p);
-    var l1[100] = prod_mod_p(n, k, dy, dxInv, p);
-
-    var l1Sq[100] = prod_mod_p(n, k, l1, l1, p);
-    var x3Pre[100] = sm_sub_mod(n, k, l1Sq, ax, p);
-    var x3[100] = sm_sub_mod(n, k, x3Pre, bx, p);
-
-    var d3[100] = sm_sub_mod(n, k, x3, ax, p);
-    var d3Inv[100] = mod_inv(n, k, d3, p);
-    var twoY[100] = sm_add_mod(n, k, ay, ay, p);
-    var q[100] = prod_mod_p(n, k, twoY, d3Inv, p);
-    var zero[100];
-    for (var i = 0; i < 100; i++) { zero[i] = 0; }
-    var negL1[100] = sm_sub_mod(n, k, zero, l1, p);
-    var l2[100] = sm_sub_mod(n, k, negL1, q, p);
-
-    var l2Sq[100] = prod_mod_p(n, k, l2, l2, p);
-    var x4Pre[100] = sm_sub_mod(n, k, l2Sq, ax, p);
-    var x4[100] = sm_sub_mod(n, k, x4Pre, x3, p);
-
-    var d4[100] = sm_sub_mod(n, k, ax, x4, p);
-    var ld[100] = prod_mod_p(n, k, l2, d4, p);
-    var y4[100] = sm_sub_mod(n, k, ld, ay, p);
-
-    var out[5][100];
-    for (var i = 0; i < 100; i++) {
-        for (var r = 0; r < 5; r++) { out[r][i] = 0; }
-    }
-    for (var i = 0; i < k; i++) {
-        out[0][i] = l1[i];
-        out[1][i] = x3[i];
-        out[2][i] = l2[i];
-        out[3][i] = x4[i];
-        out[4][i] = y4[i];
-    }
-    return out;
-}
-
 // 2*(x1, y1) on y^2 = x^3 - 3x + b, in either layout
 function p256_double_func(n, k, x1, y1) {
     var t[3][100] = p256_double_slope_func(n, k, x1, y1);

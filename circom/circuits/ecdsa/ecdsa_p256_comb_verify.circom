@@ -16,8 +16,8 @@
     Public inputs and scalars are four 64-bit limbs; points are eight 32-bit
     limbs per coordinate, converted at the boundary.
 
-    The finite affine additions inside the fake-GLV verifier sacrifice
-    completeness for inexpensive soundness checks on exceptional additions.
+    The fake-GLV table and accumulator use complete group operations and
+    an explicit infinity flag. Equality selectors consume canonical coordinates.
 */
 pragma circom 2.0.2;
 
