@@ -106,16 +106,16 @@ fn is_current(cpp: &Path, dat: &Path, inputs: &[PathBuf]) -> bool {
     })
 }
 
-/// The ECDSA witness generator is the one artifact not tracked in the repo: at
-/// 57 MiB of generated C++ it is roughly three times the largest file otherwise
-/// stored here, because the width-12 comb table is inlined in the circuit. It is
-/// compiled from `ecdsa_32.circom` on demand instead, which needs `circom` on
-/// PATH. Every other circuit still ships its `.cpp` and `.dat` in tree.
-fn generate_ecdsa_witness_generator() {
-    const CIRCUIT: &str = "ecdsa_32.circom";
+/// The ECDSA witness generators are the artifacts not tracked in the repo: at
+/// tens of MiB of generated C++ each, because the width-12 comb table is
+/// inlined in the circuit. They are compiled from `<name>.circom` on demand,
+/// which needs `circom` on PATH. Every other circuit still ships its `.cpp` and
+/// `.dat` in tree.
+fn generate_witness_generator(name: &str) {
+    let circuit = format!("{name}.circom");
 
     // Watch the generation code and every circuit in the directory, not just
-    // `ecdsa_32.circom`: that file is a `main` component over the includes that
+    // the main file: that file is a `main` component over the includes that
     // hold the circuit itself. The directory is not watched as a whole because
     // the generated files live in it.
     let inputs = generator_inputs();
@@ -124,23 +124,23 @@ fn generate_ecdsa_witness_generator() {
     }
     println!("cargo:rerun-if-env-changed={CACHE_HIT_ENV}");
 
-    let dest = Path::new(CIRCUIT_DIR).join("ecdsa_32");
-    let cpp = dest.join("ecdsa_32.cpp");
-    let dat = dest.join("ecdsa_32.dat");
+    let dest = Path::new(CIRCUIT_DIR).join(name);
+    let cpp = dest.join(format!("{name}.cpp"));
+    let dat = dest.join(format!("{name}.dat"));
     if exact_ci_cache_hit(&cpp, &dat) || is_current(&cpp, &dat, &inputs) {
         return;
     }
 
     let out_dir = std::env::var("OUT_DIR").expect("OUT_DIR is set for build scripts");
-    let staging = Path::new(&out_dir).join("ecdsa_32_circom");
+    let staging = Path::new(&out_dir).join(format!("{name}_circom"));
     let _ = fs::remove_dir_all(&staging);
     fs::create_dir_all(&staging).expect("cannot create the circom output directory");
 
     // Generate the optimized witness calculator without an `.r1cs`, which is not
-    // needed here and costs over 100 MB. circom emits into `<out>/ecdsa_32_cpp/`.
+    // needed here and costs over 100 MB. circom emits into `<out>/<name>_cpp/`.
     let status = std::process::Command::new("circom")
         .current_dir(CIRCUIT_DIR)
-        .arg(CIRCUIT)
+        .arg(&circuit)
         .arg("--c")
         .arg(CIRCOM_OPTIMIZATION)
         .arg("-o")
@@ -148,23 +148,24 @@ fn generate_ecdsa_witness_generator() {
         .status()
         .unwrap_or_else(|e| {
             panic!(
-                "could not run `circom`, which builds the ECDSA witness generator \
-                 (the only circuit artifact not stored in the repo): {e}. \
+                "could not run `circom`, which builds the ECDSA witness generators \
+                 (the circuit artifacts not stored in the repo): {e}. \
                  Install circom 2.2.3 and put it on PATH."
             )
         });
-    assert!(status.success(), "circom failed to compile {CIRCUIT}");
+    assert!(status.success(), "circom failed to compile {circuit}");
 
-    let emitted = staging.join("ecdsa_32_cpp");
+    let emitted = staging.join(format!("{name}_cpp"));
     fs::create_dir_all(&dest).expect("cannot create the circuit directory");
-    for file in ["ecdsa_32.cpp", "ecdsa_32.dat"] {
-        fs::copy(emitted.join(file), dest.join(file))
+    for file in [format!("{name}.cpp"), format!("{name}.dat")] {
+        fs::copy(emitted.join(&file), dest.join(&file))
             .unwrap_or_else(|e| panic!("circom did not emit {file}: {e}"));
     }
 }
 
 fn main() {
-    generate_ecdsa_witness_generator();
+    generate_witness_generator("ecdsa_32");
+    generate_witness_generator("ecdsa_p256_32");
 
     // SHA256 circuits
     witnesscalc_adapter::build_and_link("./circuits/sha256/sha256_128");
@@ -175,6 +176,9 @@ fn main() {
 
     // ECDSA circuit (secp256k1, fake-GLV + width-12 comb)
     witnesscalc_adapter::build_and_link("./circuits/ecdsa/ecdsa_32");
+
+    // ECDSA circuit (secp256r1, 2-dimensional fake-GLV + width-12 comb)
+    witnesscalc_adapter::build_and_link("./circuits/ecdsa/ecdsa_p256_32");
 
     // Keccak circuits
     witnesscalc_adapter::build_and_link("./circuits/keccak/keccak_128");

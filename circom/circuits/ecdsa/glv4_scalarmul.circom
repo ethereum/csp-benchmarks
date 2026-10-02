@@ -13,10 +13,10 @@
     ("result witnessed, closed by an =O assertion"). For ECDSA it costs
     nothing, since the verification equation is itself a check.
 
-    The hint (u1, u2, v1, v2) comes from a dimension-4 lattice reduction, which
-    cannot run in circom's witness language, so it arrives as a private input.
-    Same pattern as gnark's hints, and it does not weaken soundness: the hint
-    is constrained by the relation mod n, by the ranges, and by (v1,v2) != 0.
+    The hint (u1, u2, v1, v2) is an input of this template, not of the
+    circuit: whoever instantiates it computes the hint at witness generation
+    time. It does not weaken soundness: the hint is constrained by the
+    relation mod n, by the ranges, and by (v1,v2) != 0.
 
     Soundness. Let t be such that Q = [t]P (it exists: Q is checked to be on
     the curve and the group is cyclic of prime order n). The constraints give

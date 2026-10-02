@@ -2628,6 +2628,7 @@ dependencies = [
  "criterion",
  "k256 0.13.4",
  "num-bigint 0.4.6",
+ "p256 0.13.2",
  "serde_json",
  "utils 0.1.0",
  "witnesscalc-adapter",

@@ -55,7 +55,7 @@ fn to_limbs(bytes: &[u8]) -> Vec<String> {
     words.iter().map(|w| w.to_string()).collect()
 }
 
-fn limbs_json(bytes: &[u8]) -> serde_json::Value {
+pub(crate) fn limbs_json(bytes: &[u8]) -> serde_json::Value {
     serde_json::json!(to_limbs(bytes))
 }
 
