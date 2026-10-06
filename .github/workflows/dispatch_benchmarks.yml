@@ -11,11 +11,6 @@ on:
         required: false
         default: true
         type: boolean
-      include_optional:
-        description: "Run all benchmarks regardless of exclusions"
-        required: false
-        default: false
-        type: boolean
       benchmark_crate:
         description: "Run only this benchmark crate in Rust workflow (e.g. risc0)"
         required: false
@@ -86,11 +81,9 @@ jobs:
           set -euo pipefail
           REF='${{ steps.ref.outputs.ref }}'
           RUN_ALL='${{ github.event.inputs.run_all }}'
-          INCLUDE_OPTIONAL='${{ github.event.inputs.include_optional }}'
           gh workflow run -R "$GITHUB_REPOSITORY" "Rust Benchmarks (parallel)" \
             --ref "$REF" \
             -f run_all="$RUN_ALL" \
-            -f include_optional="$INCLUDE_OPTIONAL" \
             -f benchmark_crate="$BENCHMARK_CRATE" \
             -f benchmark_target="$BENCHMARK_TARGET" \
             -f prod_run="$PROD_RUN"

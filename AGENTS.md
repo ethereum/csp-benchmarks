@@ -1,6 +1,6 @@
-# CSP Benchmarks (agent notes)
+# CSP Benchmarks (agent instructions)
 
-This file is a pointer; see `.github/copilot-instructions.md` for the canonical, up-to-date instructions.
+See `README.MD` for project overview and `CONTRIBUTING.md` for the full contributor guide.
 
 ## Golden rules
 
@@ -9,6 +9,13 @@ This file is a pointer; see `.github/copilot-instructions.md` for the canonical,
 - **Don’t commit generated artifacts** (e.g. `target/`, downloaded toolchains, large generated outputs) unless explicitly requested.
 - **When running git in automation**, use `git --no-pager` (avoid interactive pagers).
 - **Avoid changing `utils/` APIs** unless necessary (it affects all benchmarks).
+- When validating a Codex skill with `skill-creator/scripts/quick_validate.py`, use `/usr/local/bin/python3`, which has PyYAML installed. A missing `yaml` module in the default `python3` does not require a system-wide installation.
+
+## Communication
+
+- Use established industry or professional terminology. Use coined terms only when agreed with the user, and avoid inventing terms, especially hyphenated phrases.
+- Explain mechanisms directly. Do not introduce an explanation by denying another interpretation unless the user raised it.
+- State observed results, supporting measurements, and remaining uncertainty directly. Do not invent reader interpretations or expectations to argue against.
 
 ## Rust benchmarks
 
@@ -27,7 +34,7 @@ BENCH_INPUT_PROFILE=reduced cargo bench -p <crate>
 
 ### Gotcha: excluded crates
 
-`cairo-m/` and `nexus/` are excluded from the workspace. If you touch them, build/lint from inside each directory.
+`binius64/`, `cairo-m/`, `rookie-numbers/`, and `stark-v/` are excluded from the workspace. If you touch them, build/lint from inside each directory.
 
 ## Non-Rust benchmarks
 
@@ -55,7 +62,7 @@ BENCH_INPUT_PROFILE=reduced bash ./benchmark.sh --system-dir ./<system> --loggin
 
 ## Common Gotchas
 
-- Follow existing examples (plonky2, circom, sp1, barretenberg, ligetron) for patterns
+- Follow existing examples (plonky2, circom, risc0, barretenberg, ligetron) for patterns
 - Record circuit sizes accurately in your measure scripts
 - Ensure memory binaries perform only preprocessing + proving (no verify)
 - Don't break existing benchmarks while adding new ones
@@ -67,12 +74,14 @@ See `CONTRIBUTING.md` for comprehensive guidelines on adding benchmarks.
 Before reporting completion:
 
 1. Run `cargo build --workspace` successfully
-   - **Note**: Some crates (`cairo-m`, `nexus`) are excluded from the workspace. Build them separately:
+   - **Note**: Some crates (`binius64`, `cairo-m`, `rookie-numbers`, `stark-v`) are excluded from the workspace. Build them separately:
      ```bash
+     cd binius64 && cargo build && cd ..
      cd cairo-m && cargo build && cd ..
-     cd nexus && cargo build && cd ..
+     cd rookie-numbers && cargo build && cd ..
+     cd stark-v && cargo build && cd ..
      ```
 2. Run `cargo clippy --workspace --all-targets --all-features` with no errors
-   - For excluded crates: `cd cairo-m && cargo clippy --all-targets --all-features && cd ..` (and same for nexus)
+   - For excluded crates: `cd binius64 && cargo clippy --all-targets --all-features && cd ..` (and same for `cairo-m`, `rookie-numbers`, and `stark-v`)
 3. Run `cargo fmt --all -- --check`
 4. Test benchmark with `BENCH_INPUT_PROFILE=reduced`

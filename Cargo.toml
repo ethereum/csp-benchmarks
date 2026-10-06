@@ -2,7 +2,6 @@
 resolver = "3"
 members = [
     "plonky2",
-    "openvm",
     "provekit",
     "provekit-groth16",
     "polyhedra-expander",
@@ -11,7 +10,6 @@ members = [
     "jolt",
     "miden",
     "risc0",
-    "sp1",
     "spartan2",
     "flock",
     "utils",
@@ -23,7 +21,6 @@ exclude = [
     # cannot satisfy both versions.
     "binius64",
     "cairo-m",
-    "nexus",
     "rookie-numbers",
     "stark-v",
 ]

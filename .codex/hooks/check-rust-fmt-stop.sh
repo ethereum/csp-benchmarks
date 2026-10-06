@@ -15,7 +15,7 @@ trap 'rm -f "$tmp"' EXIT
   echo "cargo fmt --all -- --check"
   cargo fmt --all -- --check
 
-  for crate in cairo-m nexus rookie-numbers stark-v; do
+  for crate in cairo-m rookie-numbers stark-v; do
     if [[ -d "$crate" ]]; then
       echo
       echo "(cd $crate && cargo fmt --all -- --check)"
