@@ -12,7 +12,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  EXCLUDED_CRATES: "binius64 nexus cairo-m stark-v"
+  EXCLUDED_CRATES: "binius64 cairo-m stark-v"
   GITHUB_TOKEN: ${{ secrets.GH_PAT || github.token }}
 
 # ────────────────── 1. Warm‑up build ──────────────────
@@ -33,7 +33,6 @@ jobs:
             ~/.rustup
             target
             binius64/target
-            nexus/target
             cairo-m/target
             rookie-numbers/target
             stark-v/target

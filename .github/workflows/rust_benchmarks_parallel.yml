@@ -18,11 +18,6 @@ on:
         required: false
         default: false
         type: boolean
-      include_optional:
-        description: "Run benchmarks of excluded systems"
-        required: false
-        default: false
-        type: boolean
       benchmark_crate:
         description: "Run only this benchmark crate (e.g. risc0)"
         required: false
@@ -76,7 +71,6 @@ jobs:
           BASE_REF="${{ steps.base.outputs.BASE_REF }}"
 
           RUN_ALL="${{ github.event.inputs.run_all }}"
-          INCLUDE_OPTIONAL="${{ github.event.inputs.include_optional }}"
           BENCHMARK_CRATE='${{ github.event.inputs.benchmark_crate }}'
           BENCHMARK_TARGET='${{ github.event.inputs.benchmark_target }}'
 
@@ -87,7 +81,7 @@ jobs:
 
           if [[ -n "$BENCHMARK_CRATE" ]]; then
             json=$(jq -cn --arg crate "$BENCHMARK_CRATE" '[$crate]')
-            echo "benchmark_crate override active: ignoring run_all, include_optional, and diff detection"
+            echo "benchmark_crate override active: ignoring run_all and diff detection"
             echo "Selected crate override: '$json'"
             echo "crates=$json" >> "$GITHUB_OUTPUT"
             exit 0
@@ -132,17 +126,6 @@ jobs:
             fi
           done
 
-          # ─── 3.5 exclude optional crates unless explicitly included ────
-          if [[ "$INCLUDE_OPTIONAL" != "true" ]]; then
-            filtered=()
-            for d in "${changed[@]}"; do
-              if [[ ! "$d" =~ ^(openvm|sp1|nexus)(/|$) ]]; then
-                filtered+=("$d")
-              fi
-            done
-            changed=("${filtered[@]}")
-          fi
-
           # ─── 4. output JSON array ───────────────────────────────────────
           json=$(printf '%s\n' "${changed[@]}" |
             jq -R -s -c 'split("\n") | map(select(length>0))')
@@ -168,7 +151,6 @@ jobs:
             ~/.rustup
             target
             binius64/target
-            nexus/target
             cairo-m/target
             rookie-numbers/target
             stark-v/target
@@ -205,18 +187,11 @@ jobs:
           toolchain: nightly-2025-07-14
           profile: minimal
 
-      - name: Install OpenVM
-        if: ${{ github.event.inputs.include_optional == true }}
-        uses: ./.github/actions/install-openvm
       - name: Install OpenMPI for polyhedra-expander
         uses: ./.github/actions/install-ompi
 
       - name: Install RISC0 toolchain
         uses: ./.github/actions/install-risc0
-
-      - name: Install SP1 toolchain
-        if: ${{ github.event.inputs.include_optional == true }}
-        uses: ./.github/actions/install-sp1
 
       - name: Install LLVM and LLD for cairo-m
         uses: ./.github/actions/install-llvm
@@ -248,22 +223,13 @@ jobs:
           fi
 
       - name: Build full workspace (release)
-        run: |
-          INCLUDE_OPTIONAL='${{ github.event.inputs.include_optional }}'
-          if [[ "$INCLUDE_OPTIONAL" == "true" ]]; then
-            cargo build --release --workspace
-          else
-            cargo build --release --workspace --exclude openvm --exclude sp1
-          fi
+        run: cargo build --release --workspace
 
       - name: Build non-workspace crates separately
         run: |
           CRATES='${{ needs.detect-crates.outputs.crates }}'
           if echo "$CRATES" | grep -q '"binius64"'; then
             cd binius64 && RUSTFLAGS="-C target-cpu=native" cargo build --release && cd ..
-          fi
-          if echo "$CRATES" | grep -q '"nexus"'; then
-            cd nexus && cargo build --release && cd ..
           fi
           if echo "$CRATES" | grep -q '"cairo-m"'; then
             cd cairo-m && cargo build --release && cd ..
@@ -333,7 +299,6 @@ jobs:
             ~/.cargo/git
             target
             binius64/target
-            nexus/target
             cairo-m/target
             rookie-numbers/target
             stark-v/target
@@ -358,7 +323,7 @@ jobs:
           profile: minimal
 
       - name: Install excluded crates toolchain
-        if: ${{ contains(matrix.crate, 'nexus') || contains(matrix.crate, 'cairo-m') }}
+        if: ${{ contains(matrix.crate, 'cairo-m') }}
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly-2025-04-06
@@ -373,10 +338,6 @@ jobs:
           override: true
           profile: minimal
 
-      - name: Install OpenVM
-        if: ${{ contains(matrix.crate, 'openvm') }}
-        uses: ./.github/actions/install-openvm
-
       - name: Install Nargo
         if: ${{ contains(matrix.crate, 'provekit') }}
         uses: ./.github/actions/install-nargo
@@ -390,10 +351,6 @@ jobs:
       - name: Install RISC0 toolchain
         if: ${{ contains(matrix.crate, 'risc0') }}
         uses: ./.github/actions/install-risc0
-
-      - name: Install SP1 toolchain
-        if: ${{ contains(matrix.crate, 'sp1') }}
-        uses: ./.github/actions/install-sp1
 
       - name: Install Jolt toolchain
         if: ${{ contains(matrix.crate, 'jolt') }}
@@ -437,7 +394,7 @@ jobs:
           fi
 
       - name: Build and copy excluded memory benchmark binary to workspace target
-        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'nexus') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') || contains(matrix.crate, 'stark-v') }}
+        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') || contains(matrix.crate, 'stark-v') }}
         run: |
           mkdir -p target/release
           if [ "${{ matrix.crate }}" = "binius64" ]; then
@@ -445,9 +402,6 @@ jobs:
             cp binius64/target/release/sha256_mem_binius64 target/release/
             cp binius64/target/release/keccak_mem_binius64 target/release/
             cp binius64/target/release/blake3_mem_binius64 target/release/
-          elif [ "${{ matrix.crate }}" = "nexus" ]; then
-            cd nexus && cargo build --release --bin sha256_mem_nexus && cd ..
-            cp nexus/target/release/sha256_mem_nexus target/release/
           elif [ "${{ matrix.crate }}" = "cairo-m" ]; then
             cd cairo-m && cargo build --release --bin sha256_mem_cairo_m && cd ..
             cp cairo-m/target/release/sha256_mem_cairo_m target/release/
@@ -483,7 +437,7 @@ jobs:
           fi
 
       - name: Copy excluded crates criterion results to workspace target
-        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'nexus') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') || contains(matrix.crate, 'stark-v') }}
+        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') || contains(matrix.crate, 'stark-v') }}
         run: |
           mkdir -p target/criterion
           cp -r ${{ matrix.crate }}/target/criterion/* target/criterion/
