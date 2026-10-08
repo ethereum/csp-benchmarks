@@ -1,6 +1,7 @@
 pragma circom 2.0.2;
 include "./check_point.circom";
 
+// out[0] = a + b, out[1] = 2a + b (the Straus step).
 template PointOps() {
     signal input a[2][8];
     signal input b[2][8];
@@ -17,20 +18,20 @@ template PointOps() {
         }
     }
     component add = Secp256k1AddComplete();
-    component dbl = Secp256k1DoubleComplete();
+    component step = Secp256k1DoubleAddComplete();
     add.aInf <== aInf; add.bInf <== bInf;
-    dbl.inInf <== aInf;
+    step.aInf <== aInf; step.bInf <== bInf;
     for (var c = 0; c < 2; c++) {
         for (var j = 0; j < 8; j++) {
             add.a[c][j] <== a[c][j]; add.b[c][j] <== b[c][j];
-            dbl.in[c][j] <== a[c][j];
+            step.a[c][j] <== a[c][j]; step.b[c][j] <== b[c][j];
         }
     }
-    outInf[0] <== add.outInf; outInf[1] <== dbl.outInf;
+    outInf[0] <== add.outInf; outInf[1] <== step.outInf;
     for (var c = 0; c < 2; c++) {
         for (var j = 0; j < 8; j++) {
             out[0][c][j] <== add.out[c][j];
-            out[1][c][j] <== dbl.out[c][j];
+            out[1][c][j] <== step.out[c][j];
         }
     }
 }

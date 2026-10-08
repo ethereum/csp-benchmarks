@@ -175,4 +175,7 @@ assert max(2*two, 3*two, two + limb) < 1 << 69                 # complete additi
 assert max(two, 3*limb) < 1 << 69                              # complete addition x
 assert max(two + 2*limb, two) < 1 << 69                        # complete addition y
 assert max(two, limb) < 1 << 69                                # a*b - out
+assert 2*limb < 1 << 69                                         # fused step: sign of ya
+assert max(2*two + 2*limb, 2*two) < 1 << 69                     # fused step: (l1 + l2)*(xS - xa) + 2*ya
+assert max(two + 2*limb, two) < 1 << 69                         # fused step: output line
 print('(32, 8) residual register bounds 2^104, 2^102 and 2^69 pass', flush=True)

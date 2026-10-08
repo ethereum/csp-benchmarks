@@ -87,22 +87,25 @@ async function points() {
     for (let i = 1n; i <= 6n; i++) cases.push([mul(i*12345n), mul(i*67891n)]);
     for (const [a, b] of cases) {
         const result = await c.valid({ a: encode(a), b: encode(b), aInf: Number(!a), bInf: Number(!b) });
-        const expected = [add(a, b), add(a, a)];
+        const expected = [add(a, b), add(add(a, a), b)];
         const coordinates = expected.flatMap(p => encode(p).flat().map(BigInt));
         assert.deepEqual(result.witness.slice(1, 33), coordinates);
         assert.deepEqual(result.witness.slice(33, 35), expected.map(p => BigInt(!p)));
         // Mutate outputs and the selectors of each exceptional class:
-        // tangent, cancellation and input infinity.
+        // tangent, cancellation and input infinity, in the addition and in
+        // the fused 2a + b step.
         await c.forge(result.bin, ['main.out[0][0][0]', 'main.out[1][1][0]',
             'main.outInf[0]', 'main.outInf[1]', 'main.add.tangent', 'main.add.cancel',
-            'main.add.lambda[0]', 'main.add.slopeCheck.c.q[0]']);
+            'main.add.lambda[0]', 'main.add.slopeCheck.c.q[0]', 'main.step.equalY',
+            'main.step.l1[0]', 'main.step.xS[0]', 'main.step.l2[0]']);
         baseline = result;
     }
     for (const [key, value] of [['aInf', 2], ['bInf', 2], ['a', encode([P, 0n])], ['a', encode([0n, 0n])]]) {
         await assert.rejects(c.calculator.calculateWitness({ a: encode(G), b: encode(G), aInf: 0, bInf: 0, [key]: value }, true));
     }
     await assert.rejects(c.calculator.calculateWitness({ a: encode(G), b: encode(G), aInf: 1, bInf: 0 }, true));
-    await c.forge(baseline.bin, ['main.add.xCheck.c.q[0]', 'main.add.yCheck.c.q[0]']);
+    await c.forge(baseline.bin, ['main.add.xCheck.c.q[0]', 'main.add.yCheck.c.q[0]',
+        'main.step.slopeCheck2.c.q[0]', 'main.step.chord2.c.q[0]', 'main.step.line2.c.q[0]']);
     c.done();
 }
 async function straus() {
@@ -122,7 +125,7 @@ async function straus() {
         const a = mul(mod(-offset*inv(coefficient, N), N), D);
         const result = await c.valid(inputs(a));
         assert.equal(c.value(result.witness, `main.loop.accInf[${i}]`), 1n);
-        await c.forge(result.bin, [`main.loop.accInf[${i}]`, `main.loop.adder[${i-1n}].lambda[0]`]);
+        await c.forge(result.bin, [`main.loop.accInf[${i}]`, `main.loop.step[${i-1n}].l2[0]`]);
     }
     // T1 = O for the base -D, and T3 = T1 + A1 recovers a finite point.
     const result = await c.valid(inputs(mul(-1n, D)));
@@ -173,9 +176,10 @@ async function ecdsa() {
     await c.forge(baseline.bin, ['main.r[0]', 'main.s[0]', 'main.msghash[0]', 'main.pubkey[0][0]',
         'main.sinv[0]', 'main.Rx[0]', 'main.Ry[0]', 'main.mag[0]', 'main.sgn[1]',
         'main.glv.loop.TInf[1]', 'main.glv.loop.tab[1].tangent', 'main.glv.loop.tab[1].lambda[0]',
-        'main.glv.loop.tab[1].slopeCheck.c.q[0]', 'main.glv.loop.adder[0].lambda[0]',
-        'main.glv.loop.adder[0].tangent', 'main.glv.loop.adder[0].xCheck.c.q[0]',
-        'main.glv.loop.adder[0].yCheck.c.q[0]', 'main.glv.loop.accInf[1]']);
+        'main.glv.loop.tab[1].slopeCheck.c.q[0]', 'main.glv.loop.step[0].l1[0]',
+        'main.glv.loop.step[0].xS[0]', 'main.glv.loop.step[0].l2[0]',
+        'main.glv.loop.step[0].slopeCheck2.c.q[0]', 'main.glv.loop.step[0].chord2.c.q[0]',
+        'main.glv.loop.step[0].line2.c.q[0]', 'main.glv.loop.accInf[1]']);
     c.done();
 }
 (async () => {

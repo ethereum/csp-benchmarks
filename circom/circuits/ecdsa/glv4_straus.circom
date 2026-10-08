@@ -157,12 +157,13 @@ template GLV4StrausLoop(nbits) {
         TInf[d] <== tab[d].outInf;
     }
 
-    // ---------- the loop: nbits steps, one double + one add each ----------
+    // ---------- the loop: nbits steps, one 2*acc + T[d] each ----------
     // The selector also carries the infinity flag of the entry. The bits are
-    // Boolean, so the selected entry is exactly one table row.
+    // Boolean, so the selected entry is exactly one table row. The
+    // accumulator has a canonical x and a y in 32-bit limbs; see
+    // Secp256k1DoubleAddComplete.
     component sel[nbits];
-    component dbl[nbits - 1];
-    component adder[nbits - 1];
+    component step[nbits - 1];
     signal acc[nbits][2][8];
     signal accInf[nbits];
 
@@ -188,34 +189,27 @@ template GLV4StrausLoop(nbits) {
             }
             accInf[i] <== sel[i].out[16];
         } else {
-            dbl[i] = Secp256k1DoubleComplete();
-            adder[i] = Secp256k1AddComplete();
-
-            dbl[i].inInf <== accInf[i + 1];
+            step[i] = Secp256k1DoubleAddComplete();
+            step[i].aInf <== accInf[i + 1];
+            step[i].bInf <== sel[i].out[16];
             for (var c = 0; c < 2; c++) {
                 for (var j = 0; j < 8; j++) {
-                    dbl[i].in[c][j] <== acc[i + 1][c][j];
-                }
-            }
-            adder[i].aInf <== dbl[i].outInf;
-            adder[i].bInf <== sel[i].out[16];
-            for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 8; j++) {
-                    adder[i].a[c][j] <== dbl[i].out[c][j];
-                    adder[i].b[c][j] <== sel[i].out[c * 8 + j];
+                    step[i].a[c][j] <== acc[i + 1][c][j];
+                    step[i].b[c][j] <== sel[i].out[c * 8 + j];
                 }
             }
             for (var c = 0; c < 2; c++) {
                 for (var j = 0; j < 8; j++) {
-                    acc[i][c][j] <== adder[i].out[c][j];
+                    acc[i][c][j] <== step[i].out[c][j];
                 }
             }
-            accInf[i] <== adder[i].outInf;
+            accInf[i] <== step[i].outInf;
         }
     }
 
     // ---------- terminal assertion: acc == (2^nbits - 1)*D ----------
-    // C is finite, so the final accumulator must be finite as well.
+    // C is finite, so the final accumulator must be finite as well. The
+    // canonical target fixes both coordinates, including the y limbs.
     var Cx[100] = p256_split64to32(get_glv4_target_x());
     var Cy[100] = p256_split64to32(get_glv4_target_y());
     accInf[0] === 0;

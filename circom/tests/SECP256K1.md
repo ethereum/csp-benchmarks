@@ -4,7 +4,7 @@
 
 The public interface is `r[4]`, `s[4]`, `msghash[4]`, and `pubkey[2][4]`, using little-endian 64-bit limbs. The circuit validates the finite public key, reduces the prehash modulo the group order, and constrains `R.x mod n = r` for a finite verification result. Fake-GLV decomposition values are derived during witness generation and constrained inside the circuit. Points are handled in eight 32-bit limbs per coordinate, converted at the boundary; scalars stay in 64-bit limbs.
 
-`Secp256k1AddComplete` and `Secp256k1DoubleComplete` require valid curve points with canonical 32-bit-limb coordinates when finite. Infinity is `(x,y,isInf) = (0,0,1)`. `GLV4StrausLoop` range-checks both coordinates of its bases, and the ECDSA circuit supplies finite bases on the curve.
+`Secp256k1AddComplete` requires valid curve points with canonical 32-bit-limb coordinates when finite. `Secp256k1DoubleAddComplete`, the Straus step `2a + b`, takes an accumulator with a canonical x and a y in 32-bit limbs, and a canonical table entry; its output has the accumulator's form. Infinity is `(x,y,isInf) = (0,0,1)`. `GLV4StrausLoop` range-checks both coordinates of its bases, and the ECDSA circuit supplies finite bases on the curve.
 
 ## Regression commands
 
