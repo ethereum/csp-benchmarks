@@ -3,13 +3,10 @@ use std::borrow::Cow;
 use anyhow::Result;
 use binius_core::{Word, constraint_system::ConstraintSystem};
 use binius_frontend::{Circuit, CircuitBuilder};
+use binius_hash::StdHashSuite;
 use binius_prover::zk_config::ZKProver;
-use binius_verifier::{
-    config::StdChallenger,
-    hash::StdHashSuite,
-    transcript::{ProverTranscript, VerifierTranscript},
-    zk_config::ZKVerifier,
-};
+use binius_transcript::{ProverTranscript, VerifierTranscript};
+use binius_verifier::{config::StdChallenger, zk_config::ZKVerifier};
 use utils::harness::{AuditStatus, BenchProperties};
 
 use crate::circuit_utils::{CircuitTrait, StdProver, StdVerifier};

@@ -9,6 +9,7 @@ See `README.MD` for project overview and `CONTRIBUTING.md` for the full contribu
 - **Don’t commit generated artifacts** (e.g. `target/`, downloaded toolchains, large generated outputs) unless explicitly requested.
 - **When running git in automation**, use `git --no-pager` (avoid interactive pagers).
 - **Avoid changing `utils/` APIs** unless necessary (it affects all benchmarks).
+- Tests cover benchmark code, circuits, and integrations maintained in this repository. Do not add correctness tests for unchanged upstream proving systems or circuits; those tests belong upstream.
 - When validating a Codex skill with `skill-creator/scripts/quick_validate.py`, use `/usr/local/bin/python3`, which has PyYAML installed. A missing `yaml` module in the default `python3` does not require a system-wide installation.
 
 ## Communication
@@ -34,7 +35,7 @@ BENCH_INPUT_PROFILE=reduced cargo bench -p <crate>
 
 ### Gotcha: excluded crates
 
-`binius64/`, `cairo-m/`, `rookie-numbers/`, and `stark-v/` are excluded from the workspace. If you touch them, build/lint from inside each directory.
+`binius64/`, `provekit-groth16/`, `cairo-m/`, `rookie-numbers/`, and `stark-v/` are excluded from the workspace. If you touch them, build/lint from inside each directory.
 
 ## Non-Rust benchmarks
 
@@ -74,14 +75,15 @@ See `CONTRIBUTING.md` for comprehensive guidelines on adding benchmarks.
 Before reporting completion:
 
 1. Run `cargo build --workspace` successfully
-   - **Note**: Some crates (`binius64`, `cairo-m`, `rookie-numbers`, `stark-v`) are excluded from the workspace. Build them separately:
+   - **Note**: Some crates (`binius64`, `provekit-groth16`, `cairo-m`, `rookie-numbers`, `stark-v`) are excluded from the workspace. Build them separately:
      ```bash
      cd binius64 && cargo build && cd ..
+     cd provekit-groth16 && cargo build && cd ..
      cd cairo-m && cargo build && cd ..
      cd rookie-numbers && cargo build && cd ..
      cd stark-v && cargo build && cd ..
      ```
 2. Run `cargo clippy --workspace --all-targets --all-features` with no errors
-   - For excluded crates: `cd binius64 && cargo clippy --all-targets --all-features && cd ..` (and same for `cairo-m`, `rookie-numbers`, and `stark-v`)
+   - For excluded crates: `cd binius64 && cargo clippy --all-targets --all-features && cd ..` (and same for `provekit-groth16`, `cairo-m`, `rookie-numbers`, and `stark-v`)
 3. Run `cargo fmt --all -- --check`
 4. Test benchmark with `BENCH_INPUT_PROFILE=reduced`

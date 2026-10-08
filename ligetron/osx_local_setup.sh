@@ -63,7 +63,7 @@ fi
 
 step "Installing build dependencies via Homebrew"
 brew update
-brew install cmake gmp mpfr libomp llvm boost nlohmann-json
+brew install cmake gmp mpfr libomp llvm boost nlohmann-json protobuf
 ok "Homebrew deps installed"
 
 step "Installing pinned WABT ${WABT_VERSION}"
@@ -111,8 +111,8 @@ if [[ "${REINSTALL}" == "1" ]]; then
 fi
 mkdir -p release
 pushd release >/dev/null
-cmake -DDAWN_FETCH_DEPENDENCIES=ON -DDAWN_ENABLE_INSTALL=ON -DCMAKE_BUILD_TYPE=Release ..
-cmake --build . -j
+cmake -DDAWN_FETCH_DEPENDENCIES=ON -DDAWN_BUILD_MONOLITHIC_LIBRARY=STATIC -DDAWN_ENABLE_INSTALL=ON -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . --parallel "${BUILD_JOBS:-2}"
 # Install to default prefix (/usr/local on Intel; /opt/homebrew on Apple Silicon may need sudo)
 sudo cmake --install .
 popd >/dev/null
@@ -193,8 +193,7 @@ pushd build >/dev/null
 # Ensure emsdk env is live for this subshell
 # shellcheck disable=SC1091
 source "${EMSDK_DIR}/emsdk_env.sh"
-emcmake cmake ..
-cmake --build . -j
+bash "${SCRIPT_DIR}/build_programs.sh"
 popd >/dev/null
 popd >/dev/null
 ok "Ligetron SDK built"
@@ -210,8 +209,8 @@ if [[ "${REINSTALL}" == "1" ]]; then
 fi
 mkdir -p build
 pushd build >/dev/null
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build . -j
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_NO_SYSTEM_FROM_IMPORTED=ON ..
+cmake --build . --parallel "${BUILD_JOBS:-2}"
 popd >/dev/null
 popd >/dev/null
 ok "Ligetron native built"

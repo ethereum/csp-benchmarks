@@ -2,8 +2,9 @@ use anyhow::{Result, ensure};
 use rand::{Rng, SeedableRng, rngs::StdRng};
 
 use binius_frontend::{CircuitBuilder, WitnessFiller};
+use binius_hash::StdHashSuite;
 use binius_prover::{OptimalPackedB128, zk_config::ZKProver};
-use binius_verifier::{hash::StdHashSuite, zk_config::ZKVerifier};
+use binius_verifier::zk_config::ZKVerifier;
 
 use clap::Args;
 

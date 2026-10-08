@@ -10,8 +10,8 @@ set -euo pipefail
 : "${STATE_JSON:?STATE_JSON is required}"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROGRAM_PATH="${SCRIPT_DIR}/ligero-prover/sdk/cpp/build/examples/ecdsa_p256_verify_prehashed.wasm"
-SHADER_PATH="${SCRIPT_DIR}/ligero-prover/shader"
+PROGRAM_PATH="${SCRIPT_DIR}/ligero-prover/sdk/cpp/build/examples/ecdsa_p256_verify_digest.wasm"
+SHADER_PATH="${SCRIPT_DIR}/ligero-prover/build/shader"
 
 # Get ECDSA components: digest, pub_key_x, pub_key_y, signature
 ECDSA_OUT="$("$UTILS_BIN" ecdsa)"
@@ -29,8 +29,8 @@ if [[ -z "$DIGEST" || -z "$SIGNATURE" || -z "$PUBKEY" ]]; then
 fi
 
 # Build JSON for Ligetron prover
-# Args order matches ecdsa_p256_verify_prehashed.cpp: msg_hash, signature, pubkey
-JQ_PROG='{program:$prog, "shader-path":$shader, packing:16384, "private-indices":[1,2,3], args:[{hex:$hash},{hex:$sig},{hex:$pub}]}'
+# The signature occupies argument 2 in Ligetron's input list.
+JQ_PROG='{program:$prog, "shader-path":$shader, packing:16384, "private-indices":[2], args:[{hex:$hash},{hex:$sig},{hex:$pub}]}'
 
 jq -nc \
   --arg prog "$PROGRAM_PATH" \

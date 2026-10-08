@@ -1,10 +1,10 @@
 [package]
-name = "spartan2-bench"
+name = "vega-bench"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-spartan2 = { git = "https://github.com/microsoft/Spartan2.git", default-features = false, rev = "80a6a26" }
+vega-prover = { git = "https://github.com/microsoft/vega-prover", default-features = false, rev = "c0ee259053cd12eaf43ed71b5cde375452b3ee4d" }
 bellpepper = "0.4"
 bellpepper-core = "0.4"
 ff = { version = "0.13", features = ["derive"] }
@@ -18,12 +18,9 @@ clap = { workspace = true }
 criterion = { workspace = true }
 
 [[bin]]
-name = "sha256_mem_spartan2"
-path = "src/bin/sha256_mem_spartan2.rs"
+name = "sha256_mem_vega"
+path = "src/bin/sha256_mem_vega.rs"
 
 [[bench]]
 name = "sha256"
 harness = false
-
-[profile.release]
-debug = true

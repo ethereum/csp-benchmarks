@@ -2,7 +2,7 @@ use bignum::BigNum;
 use bigcurve::curves::secp256r1::{Secp256r1_Fq, Secp256r1_Fr};
 use noir_ecdsa::ecdsa::verify_secp256r1_ecdsa;
 
-fn main(hashed_message: [u8; 32], pub_key_x: [u8; 32], pub_key_y: [u8; 32], signature: [u8; 64]) {
+fn main(hashed_message: pub [u8; 32], pub_key_x: pub [u8; 32], pub_key_y: pub [u8; 32], signature: [u8; 64]) {
     let public_key_x = Secp256r1_Fq::from_be_bytes(pub_key_x);
     let public_key_y = Secp256r1_Fq::from_be_bytes(pub_key_y);
     let r = signature_scalar(signature, 0);

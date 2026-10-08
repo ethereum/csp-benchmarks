@@ -1,5 +1,5 @@
 use clap::Parser;
-use spartan2_bench::{prepare_sha256, prove_sha256};
+use vega_bench::{prepare_sha256, prove_sha256};
 
 #[derive(Parser, Debug)]
 struct Args {

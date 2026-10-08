@@ -3,11 +3,14 @@ name = "provekit-groth16-bench"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+resolver = "3"
+
 [dependencies]
-rand = { workspace = true }
-utils = { workspace = true }
-criterion = { workspace = true }
-clap = { workspace = true }
+rand = "0.8"
+utils = { path = "../utils" }
+criterion = "0.5"
+clap = { version = "4.5", features = ["derive", "env"] }
 ark-serialize = "0.5"
 noirc_abi = { git = "https://github.com/noir-lang/noir", rev = "v1.0.0-beta.19" }
 provekit-common = { git = "https://github.com/worldfnd/ProveKit", rev = "b910fe8da2b909bb84f0c48a5078101369bfb435" }
@@ -55,3 +58,10 @@ harness = false
 [[bench]]
 name = "keccak"
 harness = false
+
+[patch.crates-io]
+ark-ff = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
+ark-ec = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
+ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
+ark-bn254 = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
+allocative = { git = "https://github.com/facebookexperimental/allocative", rev = "85b773d85d526d068ce94724ff7a7b81203fc95e" }

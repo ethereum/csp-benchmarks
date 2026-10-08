@@ -17,14 +17,14 @@ sha3 = "0.12.0"
 blake3 = "1.8"
 
 tracing-profile = "0.10"
-binius-frontend = { git = "https://github.com/IrreducibleOSS/binius64", rev = "b292bc4caebfc56360065192b6840c2b8dda11b2" }
-binius-circuits = { git = "https://github.com/IrreducibleOSS/binius64", rev = "b292bc4caebfc56360065192b6840c2b8dda11b2" }
-binius-prover = { git = "https://github.com/IrreducibleOSS/binius64", rev = "b292bc4caebfc56360065192b6840c2b8dda11b2" }
-binius-verifier = { git = "https://github.com/IrreducibleOSS/binius64", rev = "b292bc4caebfc56360065192b6840c2b8dda11b2" }
-binius-core = { git = "https://github.com/IrreducibleOSS/binius64", rev = "b292bc4caebfc56360065192b6840c2b8dda11b2" }
-binius-utils = { git = "https://github.com/IrreducibleOSS/binius64", rev = "b292bc4caebfc56360065192b6840c2b8dda11b2" }
-binius-hash = { git = "https://github.com/IrreducibleOSS/binius64", rev = "b292bc4caebfc56360065192b6840c2b8dda11b2" }
-binius-transcript = { git = "https://github.com/IrreducibleOSS/binius64", rev = "b292bc4caebfc56360065192b6840c2b8dda11b2" }
+binius-frontend = { git = "https://github.com/IrreducibleOSS/binius64", rev = "3bab18d86086b21682f12bb561a20b4a5e1b03b5" }
+binius-circuits = { git = "https://github.com/IrreducibleOSS/binius64", rev = "3bab18d86086b21682f12bb561a20b4a5e1b03b5" }
+binius-prover = { git = "https://github.com/IrreducibleOSS/binius64", rev = "3bab18d86086b21682f12bb561a20b4a5e1b03b5" }
+binius-verifier = { git = "https://github.com/IrreducibleOSS/binius64", rev = "3bab18d86086b21682f12bb561a20b4a5e1b03b5" }
+binius-core = { git = "https://github.com/IrreducibleOSS/binius64", rev = "3bab18d86086b21682f12bb561a20b4a5e1b03b5" }
+binius-utils = { git = "https://github.com/IrreducibleOSS/binius64", rev = "3bab18d86086b21682f12bb561a20b4a5e1b03b5" }
+binius-hash = { git = "https://github.com/IrreducibleOSS/binius64", rev = "3bab18d86086b21682f12bb561a20b4a5e1b03b5" }
+binius-transcript = { git = "https://github.com/IrreducibleOSS/binius64", rev = "3bab18d86086b21682f12bb561a20b4a5e1b03b5" }
 
 [profile.release]
 lto = "thin"

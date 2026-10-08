@@ -90,15 +90,15 @@ impl CircuitTrait for Sha256Circuit {
                     word[..bytes.len()].copy_from_slice(bytes);
                     w[*wire] = Word(u32::from_be_bytes(word) as u64);
                 }
-                for (wire, bytes) in digest.iter().zip(digest_bytes.chunks_exact(4)) {
-                    w[*wire] = Word(u32::from_be_bytes(bytes.try_into().unwrap()) as u64);
+                for (wire, bytes) in digest.iter().zip(digest_bytes.as_chunks::<4>().0) {
+                    w[*wire] = Word(u32::from_be_bytes(*bytes) as u64);
                 }
             }
             Sha256Mode::Variable { message, digest } => {
                 message.populate_data(w, &message_bytes);
                 message.populate_len_bytes(w, message_len_bytes);
-                for (wire, bytes) in digest.iter().zip(digest_bytes.chunks_exact(8)) {
-                    w[*wire] = Word(u64::from_be_bytes(bytes.try_into().unwrap()));
+                for (wire, bytes) in digest.iter().zip(digest_bytes.as_chunks::<8>().0) {
+                    w[*wire] = Word(u64::from_be_bytes(*bytes));
                 }
             }
         }
