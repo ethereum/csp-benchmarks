@@ -43,23 +43,25 @@ def check_sig(h, r, s, q):
     key.verify(utils.encode_dss_signature(r, s), h.to_bytes(32, 'big'), ec.ECDSA(utils.Prehashed(hashes.SHA256())))
 
 vectors = []
-def vector(name, d=1, nonce=1, h=0, high_s=False):
+# entry: the Straus table entry the vector makes exceptional (a doubling or
+# O). sign_dependent: whether it does so depends on a decomposition sign.
+def vector(name, d=1, nonce=1, h=0, high_s=False, **extra):
     q = mul(d); r = mul(nonce)[0] % N; s = pow(nonce, -1, N)*(h+r*d) % N
     if high_s: s = N-s
-    custom(name, h, r, s, q)
+    custom(name, h, r, s, q, **extra)
     return r, s
 
-def custom(name, h, r, s, q):
+def custom(name, h, r, s, q, **extra):
     check_sig(h, r, s, q)
-    vectors.append({'name': name, 'expect': 'accept', 'input': {'r': limbs(r), 's': limbs(s), 'msghash': limbs(h), 'pubkey': [limbs(q[0]), limbs(q[1])]}})
+    vectors.append({'name': name, 'expect': 'accept', **extra, 'input': {'r': limbs(r), 's': limbs(s), 'msghash': limbs(h), 'pubkey': [limbs(q[0]), limbs(q[1])]}})
 
-def s_multiple(name, factor, d=2, nonce=3):
+def s_multiple(name, factor, entry, d=2, nonce=3):
     # S = [u2]Q = [r*d/s]G. Choose h so that r*d/s = factor*K0, i.e.
     # S = [factor]D, which enters the Straus table as A2 = -S and A3 = -phi(S).
     r = mul(nonce)[0] % N
     target = factor*K0 % N
     h = (r*nonce*d*pow(target, -1, N) - r*d) % N
-    _, s = vector(name, d=d, nonce=nonce, h=h)
+    _, s = vector(name, d=d, nonce=nonce, h=h, entry=entry)
     assert r*d*pow(s, -1, N) % N == target
 
 vector('basic', d=2, nonce=3, h=123)
@@ -67,21 +69,22 @@ vector('zero-prehash')
 vector('high-s', d=2, nonce=3, h=123, high_s=True)
 vector('hash-max', d=2, nonce=3, h=(1 << 256)-1)
 # Public key Q = +-D: table entry T[1] = D + A0 adds D to +-D.
-vector('sentinel-key', d=K0, nonce=3, h=123)
-vector('sentinel-key-negated', d=N-K0, nonce=3, h=123)
-vector('sentinel-key-other-nonce', d=K0, nonce=5, h=77)
+vector('sentinel-key', d=K0, nonce=3, h=123, entry=1)
+vector('sentinel-key-negated', d=N-K0, nonce=3, h=123, entry=1)
+vector('sentinel-key-other-nonce', d=K0, nonce=5, h=77, entry=1)
 # phi(Q) = +-D: T[2] = D + A1.
-vector('sentinel-key-phi', d=K0*pow(LAMBDA, -1, N) % N, nonce=3, h=123)
-vector('sentinel-key-phi-negated', d=-K0*pow(LAMBDA, -1, N) % N, nonce=3, h=123)
+vector('sentinel-key-phi', d=K0*pow(LAMBDA, -1, N) % N, nonce=3, h=123, entry=2)
+vector('sentinel-key-phi-negated', d=-K0*pow(LAMBDA, -1, N) % N, nonce=3, h=123, entry=2)
 # S = +-D: T[4] = D + A2; phi(S) = +-D: T[8] = D + A3.
-s_multiple('sentinel-S', 1)
-s_multiple('sentinel-S-negated', -1)
-s_multiple('sentinel-S-phi', pow(LAMBDA, -1, N))
-s_multiple('sentinel-S-phi-negated', -pow(LAMBDA, -1, N))
+s_multiple('sentinel-S', 1, 4)
+s_multiple('sentinel-S-negated', -1, 4)
+s_multiple('sentinel-S-phi', pow(LAMBDA, -1, N), 8)
+s_multiple('sentinel-S-phi-negated', -pow(LAMBDA, -1, N), 8)
 # D + A0 = +-A1 for one decomposition sign: T[3] = T[1] + A1.
 for a in (1, -1):
     for b in (1, -1):
-        vector(f'sentinel-key-combo-{a}-{b}', d=K0*pow(a*LAMBDA+b, -1, N) % N, nonce=3, h=123)
+        vector(f'sentinel-key-combo-{a}-{b}', d=K0*pow(a*LAMBDA+b, -1, N) % N, nonce=3, h=123,
+               entry=3, sign_dependent=True)
 rng = random.Random(309)
 for i in range(4): vector(f'random-{i}', rng.randrange(1, N), rng.randrange(1, N), rng.randrange(1, 1 << 256))
 

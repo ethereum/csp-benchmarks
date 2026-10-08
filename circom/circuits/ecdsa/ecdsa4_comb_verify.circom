@@ -17,8 +17,9 @@
     count covers a weaker relation. There is no `result` output; an invalid
     signature fails witness generation.
 
-    The finite affine additions inside the fake-GLV verifier still sacrifice
-    completeness for inexpensive soundness checks on exceptional additions.
+    The fake-GLV table and accumulator use complete additions with an
+    explicit infinity flag, so equal points, inverse points and infinity are
+    handled rather than rejected.
 */
 pragma circom 2.0.2;
 
@@ -211,10 +212,10 @@ template ECDSA4CombVerify() {
 
     // ---------- 7a. classify the equal-x subtraction case ----------
     // Load-bearing, not caution: Secp256k1AddUnequal leaves its output
-    // unconstrained when the operands coincide (see Secp256k1AddStrict in
-    // glv4_straus.circom). A prover who supplies R.x = ([u1]G).x and
-    // R.y = p - ([u1]G).y gets a free S, sets it equal to [u2]Q for an
-    // arbitrary Q, and verifies without the private key.
+    // unconstrained when the operands coincide, since its cubic constraint
+    // and Secp256k1PointOnLine both become 0 == 0. A prover who supplies
+    // R.x = ([u1]G).x and R.y = p - ([u1]G).y gets a free S, sets it equal
+    // to [u2]Q for an arbitrary Q, and verifies without the private key.
     //
     // Equality of limbs means equality of values only for canonical
     // representations: [u1]G leaves the table through a one-hot selector and
