@@ -40,6 +40,9 @@
 
     The bases must be valid canonical finite points: the equality selectors
     of the complete addition compare limbs.
+
+    Points are eight 32-bit limbs per coordinate. The constants below are
+    kept in 64-bit limbs and split at compile time.
 */
 pragma circom 2.0.2;
 
@@ -98,10 +101,10 @@ template GLV4StrausLoop(nbits) {
     assert(nbits == 64);
 
     signal input bits[4][nbits];
-    signal input A[4][2][4];
+    signal input A[4][2][8];
 
-    var Dx[4] = get_glv4_sentinel_x();
-    var Dy[4] = get_glv4_sentinel_y();
+    var Dx[100] = p256_split64to32(get_glv4_sentinel_x());
+    var Dy[100] = p256_split64to32(get_glv4_sentinel_y());
 
     // ---------- the bases have to be canonical ----------
     // The equality selectors compare limbs, so representations must be
@@ -110,17 +113,17 @@ template GLV4StrausLoop(nbits) {
     component baseRange[4][2];
     for (var b = 0; b < 4; b++) {
         for (var c = 0; c < 2; c++) {
-            baseRange[b][c] = CheckInRangeSecp256k1();
-            for (var j = 0; j < 4; j++) baseRange[b][c].in[j] <== A[b][c][j];
+            baseRange[b][c] = CheckInRangeSecp256k1Limbs32();
+            for (var j = 0; j < 8; j++) baseRange[b][c].in[j] <== A[b][c][j];
         }
     }
 
     // ---------- the table: 16 entries, 15 additions ----------
     // T[d] = T[d without its lowest set bit] + A[index of that bit], so every
     // new entry costs exactly one addition.
-    signal T[16][2][4];
+    signal T[16][2][8];
     signal TInf[16];
-    for (var j = 0; j < 4; j++) {
+    for (var j = 0; j < 8; j++) {
         T[0][0][j] <== Dx[j];
         T[0][1][j] <== Dy[j];
     }
@@ -141,13 +144,13 @@ template GLV4StrausLoop(nbits) {
         tab[d].aInf <== TInf[prev];
         tab[d].bInf <== 0;
         for (var c = 0; c < 2; c++) {
-            for (var j = 0; j < 4; j++) {
+            for (var j = 0; j < 8; j++) {
                 tab[d].a[c][j] <== T[prev][c][j];
                 tab[d].b[c][j] <== A[lowidx][c][j];
             }
         }
         for (var c = 0; c < 2; c++) {
-            for (var j = 0; j < 4; j++) {
+            for (var j = 0; j < 8; j++) {
                 T[d][c][j] <== tab[d].out[c][j];
             }
         }
@@ -160,18 +163,18 @@ template GLV4StrausLoop(nbits) {
     component sel[nbits];
     component dbl[nbits - 1];
     component adder[nbits - 1];
-    signal acc[nbits][2][4];
+    signal acc[nbits][2][8];
     signal accInf[nbits];
 
     for (var i = nbits - 1; i >= 0; i--) {
-        sel[i] = MultiMux4(9);
+        sel[i] = MultiMux4(17);
         for (var d = 0; d < 16; d++) {
             for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 4; j++) {
-                    sel[i].c[c * 4 + j][d] <== T[d][c][j];
+                for (var j = 0; j < 8; j++) {
+                    sel[i].c[c * 8 + j][d] <== T[d][c][j];
                 }
             }
-            sel[i].c[8][d] <== TInf[d];
+            sel[i].c[16][d] <== TInf[d];
         }
         for (var b = 0; b < 4; b++) {
             sel[i].s[b] <== bits[b][i];
@@ -179,31 +182,31 @@ template GLV4StrausLoop(nbits) {
 
         if (i == nbits - 1) {
             for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 4; j++) {
-                    acc[i][c][j] <== sel[i].out[c * 4 + j];
+                for (var j = 0; j < 8; j++) {
+                    acc[i][c][j] <== sel[i].out[c * 8 + j];
                 }
             }
-            accInf[i] <== sel[i].out[8];
+            accInf[i] <== sel[i].out[16];
         } else {
             dbl[i] = Secp256k1DoubleComplete();
             adder[i] = Secp256k1AddComplete();
 
             dbl[i].inInf <== accInf[i + 1];
             for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 4; j++) {
+                for (var j = 0; j < 8; j++) {
                     dbl[i].in[c][j] <== acc[i + 1][c][j];
                 }
             }
             adder[i].aInf <== dbl[i].outInf;
-            adder[i].bInf <== sel[i].out[8];
+            adder[i].bInf <== sel[i].out[16];
             for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 4; j++) {
+                for (var j = 0; j < 8; j++) {
                     adder[i].a[c][j] <== dbl[i].out[c][j];
-                    adder[i].b[c][j] <== sel[i].out[c * 4 + j];
+                    adder[i].b[c][j] <== sel[i].out[c * 8 + j];
                 }
             }
             for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 4; j++) {
+                for (var j = 0; j < 8; j++) {
                     acc[i][c][j] <== adder[i].out[c][j];
                 }
             }
@@ -213,10 +216,10 @@ template GLV4StrausLoop(nbits) {
 
     // ---------- terminal assertion: acc == (2^nbits - 1)*D ----------
     // C is finite, so the final accumulator must be finite as well.
-    var Cx[4] = get_glv4_target_x();
-    var Cy[4] = get_glv4_target_y();
+    var Cx[100] = p256_split64to32(get_glv4_target_x());
+    var Cy[100] = p256_split64to32(get_glv4_target_y());
     accInf[0] === 0;
-    for (var j = 0; j < 4; j++) {
+    for (var j = 0; j < 8; j++) {
         acc[0][0][j] === Cx[j];
         acc[0][1][j] === Cy[j];
     }

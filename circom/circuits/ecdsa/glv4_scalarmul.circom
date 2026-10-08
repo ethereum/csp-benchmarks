@@ -32,6 +32,9 @@
     non-zero (v1,v2) has both components below 2^64. n is prime, hence t == s.
 
     Not handled: P at infinity, or s = 0.
+
+    Scalars are 64-bit limbs and each hint magnitude is a single value below
+    2^64; points are eight 32-bit limbs per coordinate.
 */
 pragma circom 2.0.2;
 
@@ -93,8 +96,8 @@ template AddModN() {
 
 template GLV4ScalarMulVerify() {
     signal input scalar[4];   // s, in 64-bit limbs
-    signal input P[2][4];     // the base
-    signal input Q[2][4];     // the claimed result, supplied by the prover
+    signal input P[2][8];     // the base, canonical
+    signal input Q[2][8];     // the claimed result, supplied by the prover, canonical
 
     // The hint: magnitudes (each < 2^64, so one signal each) and signs.
     // Order: 0 = u1, 1 = u2, 2 = v1, 3 = v2.
@@ -102,18 +105,20 @@ template GLV4ScalarMulVerify() {
     signal input sgn[4];
 
     var ordN[100] = get_secp256k1_order(64, 4);
-    var prime[100] = get_secp256k1_prime(64, 4);
+    var prime[100] = get_secp256k1_prime32();
     var lam[4] = get_glv_lambda_limbs();
-    var bet[4] = get_glv_beta_limbs();
+    var bet[100] = p256_split64to32(get_glv_beta_limbs());
 
     signal ordSig[4];
-    signal primeSig[4];
+    signal primeSig[8];
     signal lamSig[4];
-    signal betSig[4];
+    signal betSig[8];
     for (var j = 0; j < 4; j++) {
         ordSig[j] <== ordN[j];
-        primeSig[j] <== prime[j];
         lamSig[j] <== lam[j];
+    }
+    for (var j = 0; j < 8; j++) {
+        primeSig[j] <== prime[j];
         betSig[j] <== bet[j];
     }
 
@@ -194,33 +199,33 @@ template GLV4ScalarMulVerify() {
     // ---------- 5. Q is on the curve ----------
     // Q comes from the prover; without this the soundness argument has no
     // group to work in.
-    component qOn = Secp256k1PointOnCurve();
-    for (var j = 0; j < 4; j++) {
+    component qOn = Secp256k1PointOnCurve32();
+    for (var j = 0; j < 8; j++) {
         qOn.x[j] <== Q[0][j];
         qOn.y[j] <== Q[1][j];
     }
 
     // ---------- 6. the four bases, sign folded into the point ----------
     // phi(X) = (beta*x mod p, y): one modular multiplication per point.
-    component phiPx = BigMultModP(64, 4);
-    component phiQx = BigMultModP(64, 4);
-    for (var j = 0; j < 4; j++) {
-        phiPx.a[j] <== betSig[j]; phiPx.b[j] <== P[0][j]; phiPx.p[j] <== primeSig[j];
-        phiQx.a[j] <== betSig[j]; phiQx.b[j] <== Q[0][j]; phiQx.p[j] <== primeSig[j];
+    component phiPx = Secp256k1MulModP32();
+    component phiQx = Secp256k1MulModP32();
+    for (var j = 0; j < 8; j++) {
+        phiPx.a[j] <== betSig[j]; phiPx.b[j] <== P[0][j];
+        phiQx.a[j] <== betSig[j]; phiQx.b[j] <== Q[0][j];
     }
 
     // y(phi(X)) == y(X), so one negation per point covers two bases.
-    component negPy = BigSub(64, 4);
-    component negQy = BigSub(64, 4);
-    for (var j = 0; j < 4; j++) {
+    component negPy = BigSub(32, 8);
+    component negQy = BigSub(32, 8);
+    for (var j = 0; j < 8; j++) {
         negPy.a[j] <== primeSig[j]; negPy.b[j] <== P[1][j];
         negQy.a[j] <== primeSig[j]; negQy.b[j] <== Q[1][j];
     }
 
     // The Q terms enter the relation with a minus, so their sign is flipped:
     //   [u1]P + [u2]phi(P) - [v1]Q - [v2]phi(Q) == O
-    signal A[4][2][4];
-    for (var j = 0; j < 4; j++) {
+    signal A[4][2][8];
+    for (var j = 0; j < 8; j++) {
         A[0][0][j] <== P[0][j];
         A[1][0][j] <== phiPx.out[j];
         A[2][0][j] <== Q[0][j];
@@ -239,7 +244,7 @@ template GLV4ScalarMulVerify() {
             loop.bits[i][b] <== n2b[i].out[b];
         }
         for (var c = 0; c < 2; c++) {
-            for (var j = 0; j < 4; j++) {
+            for (var j = 0; j < 8; j++) {
                 loop.A[i][c][j] <== A[i][c][j];
             }
         }

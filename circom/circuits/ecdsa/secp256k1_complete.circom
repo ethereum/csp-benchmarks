@@ -1,11 +1,12 @@
 pragma circom 2.0.2;
 
-include "./secp256k1.circom";
+include "./secp256k1_32.circom";
 include "./scalarmul_func.circom";
 
-// Flagged points use canonical affine coordinates when finite and (0,0)
-// when isInf = 1. Arithmetic templates assume valid input points. Their
-// outputs preserve this invariant by the group formulas and muxes.
+// Flagged points use canonical affine coordinates in eight 32-bit limbs when
+// finite and (0,0) when isInf = 1. Arithmetic templates assume valid input
+// points. Their outputs preserve this invariant by the group formulas and
+// muxes.
 //
 // secp256k1 has prime order, so no finite point has y = 0: the tangent
 // denominator 2*y is never zero and the double of a finite point is finite.
@@ -61,30 +62,31 @@ function secp256k1_slope_add_func(n, k, x1, y1, x2, y2, tangent) {
     in the output muxes.
 
     Equality selectors compare limbs, so finite inputs must be canonical.
-    Products of 64-bit limbs have registers below 4*2^128 = 2^130. The slope
-    residual is below 5*2^130 < 2^133, the x and y residuals below 2^132.
+    Products of 32-bit limbs have registers below 8*2^64 = 2^67. In absolute
+    value the slope residual is below 3*2^67 < 2^69 (2*l*y below 2^68, 3*x^2
+    below 3*2^67), the x and y residuals below 2^69.
 */
 template Secp256k1AddComplete() {
-    signal input a[2][4];
-    signal input b[2][4];
+    signal input a[2][8];
+    signal input b[2][8];
     signal input aInf;
     signal input bInf;
-    signal output out[2][4];
+    signal output out[2][8];
     signal output outInf;
     aInf * (aInf - 1) === 0;
     bInf * (bInf - 1) === 0;
-    var gx[100] = get_gx64();
-    var gy[100] = get_gy64();
-    signal ax[4]; signal ay[4]; signal bx[4]; signal by[4];
-    for (var j = 0; j < 4; j++) {
+    var gx[100] = p256_split64to32(get_gx64());
+    var gy[100] = p256_split64to32(get_gy64());
+    signal ax[8]; signal ay[8]; signal bx[8]; signal by[8];
+    for (var j = 0; j < 8; j++) {
         ax[j] <== a[0][j] + aInf * (gx[j] - a[0][j]);
         ay[j] <== a[1][j] + aInf * (gy[j] - a[1][j]);
         bx[j] <== b[0][j] + bInf * (ax[j] - b[0][j]);
         by[j] <== b[1][j] + bInf * (ay[j] - b[1][j]);
     }
-    component sameX = BigIsEqual(4);
-    component sameY = BigIsEqual(4);
-    for (var j = 0; j < 4; j++) {
+    component sameX = BigIsEqual(8);
+    component sameY = BigIsEqual(8);
+    for (var j = 0; j < 8; j++) {
         sameX.in[0][j] <== ax[j]; sameX.in[1][j] <== bx[j];
         sameY.in[0][j] <== ay[j]; sameY.in[1][j] <== by[j];
     }
@@ -101,8 +103,8 @@ template Secp256k1AddComplete() {
 
     // Witness generation branches only choose values; the selectors and
     // modular equations below independently establish the group relation.
-    var xAv[4]; var yAv[4]; var xBv[4]; var yBv[4];
-    for (var j = 0; j < 4; j++) {
+    var xAv[8]; var yAv[8]; var xBv[8]; var yBv[8];
+    for (var j = 0; j < 8; j++) {
         xAv[j] = ax[j]; yAv[j] = ay[j]; xBv[j] = bx[j]; yBv[j] = by[j];
     }
     var result[3][100];
@@ -110,32 +112,34 @@ template Secp256k1AddComplete() {
         for (var j = 0; j < 100; j++) { result[c][j] = 0; }
     }
     if (tangent == 1) {
-        result = secp256k1_slope_add_func(64, 4, xAv, yAv, xAv, yAv, 1);
+        result = secp256k1_slope_add_func(64, 4, secp256k1_join32(xAv), secp256k1_join32(yAv),
+            secp256k1_join32(xAv), secp256k1_join32(yAv), 1);
     } else if (cancel == 0) {
-        result = secp256k1_slope_add_func(64, 4, xAv, yAv, xBv, yBv, 0);
+        result = secp256k1_slope_add_func(64, 4, secp256k1_join32(xAv), secp256k1_join32(yAv),
+            secp256k1_join32(xBv), secp256k1_join32(yBv), 0);
     }
-    signal lambda[4];
-    signal candidate[2][4];
-    component lambdaRange[4];
+    var lambdav[100] = p256_split64to32(result[0]);
+    var candxv[100] = p256_split64to32(result[1]);
+    var candyv[100] = p256_split64to32(result[2]);
+    signal lambda[8];
+    signal candidate[2][8];
+    component lambdaRange[8];
     component candidateRange[2];
-    for (var c = 0; c < 2; c++) { candidateRange[c] = CheckInRangeSecp256k1(); }
-    for (var j = 0; j < 4; j++) {
-        lambda[j] <-- result[0][j];
-        candidate[0][j] <-- result[1][j]; candidate[1][j] <-- result[2][j];
-        lambdaRange[j] = Num2Bits(64); lambdaRange[j].in <== lambda[j];
+    for (var c = 0; c < 2; c++) { candidateRange[c] = CheckInRangeSecp256k1Limbs32(); }
+    for (var j = 0; j < 8; j++) {
+        lambda[j] <-- lambdav[j];
+        candidate[0][j] <-- candxv[j]; candidate[1][j] <-- candyv[j];
+        lambdaRange[j] = Num2Bits(32); lambdaRange[j].in <== lambda[j];
         cancel * lambda[j] === 0;
         for (var c = 0; c < 2; c++) {
             candidateRange[c].in[j] <== candidate[c][j];
             cancel * candidate[c][j] === 0;
         }
     }
-    component xasq = BigMultNoCarry(64, 64, 64, 4, 4);
-    component lay = BigMultNoCarry(64, 64, 64, 4, 4);
-    component lax = BigMultNoCarry(64, 64, 64, 4, 4);
-    component lbx = BigMultNoCarry(64, 64, 64, 4, 4);
-    component lsq = BigMultNoCarry(64, 64, 64, 4, 4);
-    component loutx = BigMultNoCarry(64, 64, 64, 4, 4);
-    for (var j = 0; j < 4; j++) {
+    component xasq = P256Mul();
+    component lay = P256Mul(); component lax = P256Mul(); component lbx = P256Mul();
+    component lsq = P256Mul(); component loutx = P256Mul();
+    for (var j = 0; j < 8; j++) {
         xasq.a[j] <== ax[j]; xasq.b[j] <== ax[j];
         lay.a[j] <== lambda[j]; lay.b[j] <== ay[j];
         lax.a[j] <== lambda[j]; lax.b[j] <== ax[j];
@@ -143,14 +147,14 @@ template Secp256k1AddComplete() {
         lsq.a[j] <== lambda[j]; lsq.b[j] <== lambda[j];
         loutx.a[j] <== lambda[j]; loutx.b[j] <== candidate[0][j];
     }
-    signal tangentResidual[7];
-    signal chordResidual[7];
-    component slopeCheck = CheckQuadraticModPIsZero(133);
-    component xCheck = CheckQuadraticModPIsZero(132);
-    component yCheck = CheckQuadraticModPIsZero(132);
-    for (var i = 0; i < 7; i++) {
+    signal tangentResidual[15];
+    signal chordResidual[15];
+    component slopeCheck = Secp256k1CheckQuadraticModPIsZero69();
+    component xCheck = Secp256k1CheckQuadraticModPIsZero69();
+    component yCheck = Secp256k1CheckQuadraticModPIsZero69();
+    for (var i = 0; i < 15; i++) {
         tangentResidual[i] <== tangent * (2 * lay.out[i] - 3 * xasq.out[i]);
-        if (i < 4) {
+        if (i < 8) {
             chordResidual[i] <== (1 - sameX.out) * (lbx.out[i] - lax.out[i] - by[i] + ay[i]);
             xCheck.in[i] <== active * (lsq.out[i] - ax[i] - bx[i] - candidate[0][i]);
             yCheck.in[i] <== active * (loutx.out[i] - lax.out[i] + candidate[1][i] + ay[i]);
@@ -161,9 +165,9 @@ template Secp256k1AddComplete() {
         }
         slopeCheck.in[i] <== tangentResidual[i] + chordResidual[i];
     }
-    signal withBInf[2][4];
+    signal withBInf[2][8];
     for (var c = 0; c < 2; c++) {
-        for (var j = 0; j < 4; j++) {
+        for (var j = 0; j < 8; j++) {
             withBInf[c][j] <== candidate[c][j] + bInf * (a[c][j] - candidate[c][j]);
             out[c][j] <== withBInf[c][j] + aInf * (b[c][j] - withBInf[c][j]);
         }
@@ -173,20 +177,20 @@ template Secp256k1AddComplete() {
 // Complete 2*a. Infinity doubles to infinity through the safe operand G;
 // a finite input has a finite double.
 template Secp256k1DoubleComplete() {
-    signal input in[2][4];
+    signal input in[2][8];
     signal input inInf;
-    signal output out[2][4];
+    signal output out[2][8];
     signal output outInf;
     inInf * (inInf - 1) === 0;
-    var gx[100] = get_gx64();
-    var gy[100] = get_gy64();
-    component dbl = Secp256k1Double(64, 4);
-    for (var j = 0; j < 4; j++) {
+    var gx[100] = p256_split64to32(get_gx64());
+    var gy[100] = p256_split64to32(get_gy64());
+    component dbl = Secp256k1Double32();
+    for (var j = 0; j < 8; j++) {
         dbl.in[0][j] <== in[0][j] + inInf * (gx[j] - in[0][j]);
         dbl.in[1][j] <== in[1][j] + inInf * (gy[j] - in[1][j]);
     }
     for (var c = 0; c < 2; c++) {
-        for (var j = 0; j < 4; j++) {
+        for (var j = 0; j < 8; j++) {
             out[c][j] <== dbl.out[c][j] - inInf * dbl.out[c][j];
         }
     }

@@ -4,7 +4,7 @@ include "../../circuits/ecdsa/glv4_straus.circom";
 
 template Straus() {
     signal input mag[4];
-    signal input A[4][2][4];
+    signal input A[4][2][8];
     component range[4];
     component valid[4];
     component loop = GLV4StrausLoop(64);
@@ -14,7 +14,7 @@ template Straus() {
         valid[b] = Secp256k1CheckPoint();
         valid[b].isInf <== 0;
         for (var c = 0; c < 2; c++) {
-            for (var j = 0; j < 4; j++) {
+            for (var j = 0; j < 8; j++) {
                 valid[b].p[c][j] <== A[b][c][j]; loop.A[b][c][j] <== A[b][c][j];
             }
         }

@@ -1,3 +1,4 @@
+import ast
 import json
 import random
 import re
@@ -133,3 +134,45 @@ t = (SRC/'comb_fixed.circom').read_text()
 vals = {int(i): int(v) for i, v in re.findall(r'badEq0\[(\d)\]\.in <== fold\.out\[\d\] - (\d+);', t)}
 assert sum(vals[i] << (64*i) for i in range(5)) == KBAD
 print('Final comb equal-point case: exhaustive odd top-digit search reproduces the k_bad in comb_fixed.circom', flush=True)
+
+# (32, 8) modular checks. The table and the parameters are read from the
+# circuit, so a change there without new bounds fails here.
+text = (SRC/'secp256k1_utils32.circom').read_text()
+table = ast.literal_eval(re.search(r'var T\[22\]\[8\] = (\[.*?\]);', text, re.S)[1])
+for i, row in enumerate(table): assert (sum(v << (32*j) for j, v in enumerate(row)) - (1 << (32*i))) % P == 0
+print('All 22 reduction rows checked modulo the secp256k1 prime', flush=True)
+pl = [(P >> (32*j)) & ((1 << 32)-1) for j in range(8)]
+checks = {name: tuple(map(int, args.split(','))) for name, args in re.findall(
+    r'template (Secp256k1Check\w+)\(\) \{\s*signal input in\[\d+\];\s*component c = Secp256k1CheckModPIsZero32\(([\d, ]+)\);', text)}
+assert sorted(checks) == ['Secp256k1CheckCubicModPIsZero102', 'Secp256k1CheckCubicModPIsZero104',
+                          'Secp256k1CheckQuadraticModPIsZero69'], checks
+for name, (regs, m, shift, kq, M, length, g, qbits) in checks.items():
+    # Independent bounds treating every signed input coefficient as adversarial.
+    bounds = [sum(abs(table[i][j]) for i in range(regs))*((1 << m)-1) for j in range(8)]
+    bound = sum(v << (32*j) for j, v in enumerate(bounds))
+    offset = P << shift
+    assert offset > bound
+    assert (offset+bound)//P < 1 << qbits <= 1 << (32*kq)
+    assert offset+bound < 1 << (32*(length-1))
+    maxqp = [sum(((1 << 32)-1)*pl[j] for j in range(8) if 0 <= i-j < kq) for i in range(kq+7)]
+    diffbound = [maxqp[i]+bounds[i]+(pl[i] << shift) if i < 8 else maxqp[i] for i in range(kq+7)]
+    assert all(v < 1 << (M-1) for v in diffbound)
+    MG = M+32*(g-1)+1
+    assert MG+3 <= 253
+    print(f'{name}: positivity, {qbits}-bit quotient, {M}-bit coefficient and MG={MG} field bounds pass', flush=True)
+
+# Register bounds of the residuals fed to those checks, for canonical 32-bit
+# limbs: a register of a product of two (three) field elements sums at most
+# 8 (48) limb products. A signed register is bounded by the larger of its
+# positive and negative parts.
+limb = (1 << 32)-1
+two, three = 8*limb**2, 48*limb**3
+assert max(4*three + 2*two, 4*three + 2*two) < 1 << 104        # chord cubic
+assert max(3*three + 4*two, 3*three) < 1 << 104                # tangent cubic
+assert max(three + 7, two) < 1 << 102                          # curve equation
+assert max(3*two, 3*two) < 1 << 69                             # line
+assert max(2*two, 3*two, two + limb) < 1 << 69                 # complete addition slope: tangent or chord
+assert max(two, 3*limb) < 1 << 69                              # complete addition x
+assert max(two + 2*limb, two) < 1 << 69                        # complete addition y
+assert max(two, limb) < 1 << 69                                # a*b - out
+print('(32, 8) residual register bounds 2^104, 2^102 and 2^69 pass', flush=True)
