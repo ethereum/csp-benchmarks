@@ -148,10 +148,15 @@ jobs:
 
       - name: Install hyperfine
         run: |
-          if ! command -v hyperfine >/dev/null 2>&1; then
-            brew update >/dev/null
-            brew install hyperfine
-          fi
+          set -euo pipefail
+          VERSION="$(cat .hyperfine-version)"
+          ASSET="hyperfine-v${VERSION}-aarch64-apple-darwin"
+          INSTALL_DIR="$RUNNER_TEMP/hyperfine-$VERSION/bin"
+          mkdir -p "$INSTALL_DIR"
+          curl -fsSL "https://github.com/sharkdp/hyperfine/releases/download/v${VERSION}/${ASSET}.tar.gz" \
+            | tar -xz --strip-components=1 -C "$INSTALL_DIR" "$ASSET/hyperfine"
+          test "$("$INSTALL_DIR/hyperfine" --version)" = "hyperfine $VERSION"
+          echo "$INSTALL_DIR" >> "$GITHUB_PATH"
 
       - name: Install Rust toolchain (stable)
         uses: actions-rs/toolchain@v1

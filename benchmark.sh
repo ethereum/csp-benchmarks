@@ -41,6 +41,13 @@ if [[ ! -d "$SYSTEM_DIR" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+HYPERFINE_VERSION="$(cat "$SCRIPT_DIR/.hyperfine-version")"
+HYPERFINE_ACTUAL="$(hyperfine --version 2>/dev/null || true)"
+if [[ "$HYPERFINE_ACTUAL" != "hyperfine $HYPERFINE_VERSION" ]]; then
+  echo "Hyperfine $HYPERFINE_VERSION is required (found ${HYPERFINE_ACTUAL:-not installed}); see README.MD for setup." >&2
+  exit 1
+fi
+
 UTILS_BIN="${SCRIPT_DIR}/target/release/utils"
 MEASURE_RAM_SCRIPT="${SCRIPT_DIR}/measure_mem_avg.sh"
 BENCH_PROPS_JSON="${SYSTEM_DIR}/bench_props.json"
