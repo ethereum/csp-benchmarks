@@ -131,7 +131,7 @@ template Secp256k1CheckModPIsZero32(regs, m, shift, kq, M, len, g, qbits) {
 // need M <= 121 for MG + 3 <= 253.
 template Secp256k1CheckCubicModPIsZero104() {
     signal input in[22];
-    component c = Secp256k1CheckModPIsZero32(22, 104, 82, 3, 125, 12, 4, 96);
+    component c = Secp256k1CheckModPIsZero32(22, 104, 82, 3, 125, 12, 4, 83);
     for (var i = 0; i < 22; i++) { c.in[i] <== in[i]; }
 }
 
@@ -139,7 +139,7 @@ template Secp256k1CheckCubicModPIsZero104() {
 // Carries over groups of four registers.
 template Secp256k1CheckCubicModPIsZero102() {
     signal input in[22];
-    component c = Secp256k1CheckModPIsZero32(22, 102, 80, 3, 123, 12, 4, 96);
+    component c = Secp256k1CheckModPIsZero32(22, 102, 80, 3, 123, 12, 4, 81);
     for (var i = 0; i < 22; i++) { c.in[i] <== in[i]; }
 }
 
@@ -147,7 +147,7 @@ template Secp256k1CheckCubicModPIsZero102() {
 // Carries over groups of six registers.
 template Secp256k1CheckQuadraticModPIsZero69() {
     signal input in[15];
-    component c = Secp256k1CheckModPIsZero32(15, 69, 39, 2, 80, 11, 6, 64);
+    component c = Secp256k1CheckModPIsZero32(15, 69, 39, 2, 80, 11, 6, 40);
     for (var i = 0; i < 15; i++) { c.in[i] <== in[i]; }
 }
 
