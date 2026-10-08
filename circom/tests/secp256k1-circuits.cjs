@@ -156,6 +156,9 @@ async function ecdsa() {
                     if (v.sign_dependent) signDependentHits += Number(hit);
                     else assert.equal(hit, 1n, `${v.name}: T[${v.entry}] is an ordinary addition`);
                 }
+                // useFinalDouble is folded away by --O2; badAcc0[4] carries its value.
+                assert.equal(c.value(result.witness, 'main.u1G.badAcc0[4]'), v.comb_final_double ? 1n : 0n,
+                    `${v.name}: unexpected comb final-doubling flag`);
             }
             console.log(`ecdsa: ${v.name} ${v.expect} ok`);
         } catch (error) {

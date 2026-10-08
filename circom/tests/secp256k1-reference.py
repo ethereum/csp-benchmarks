@@ -85,6 +85,11 @@ for a in (1, -1):
     for b in (1, -1):
         vector(f'sentinel-key-combo-{a}-{b}', d=K0*pow(a*LAMBDA+b, -1, N) % N, nonce=3, h=123,
                entry=3, sign_dependent=True)
+# With s = 1, u1 = h. h = k_bad makes the final comb addition a doubling
+# (comb_fixed.circom, section 3a); Q is chosen so that R = [2]G.
+KBAD = 0xe00000000000000000000000000000014551231950b75fc4402da1732fc9bebf
+rr = mul(2)[0] % N
+custom('comb-final-doubling', KBAD, rr, 1, mul((2-KBAD)*pow(rr, -1, N)), comb_final_double=True)
 rng = random.Random(309)
 for i in range(4): vector(f'random-{i}', rng.randrange(1, N), rng.randrange(1, N), rng.randrange(1, 1 << 256))
 
@@ -113,3 +118,18 @@ C = (getter('get_glv4_target_x'), getter('get_glv4_target_y'))
 assert D == mul(K0)
 assert C == mul((1 << 64)-1, D)
 print('Straus secp256k1 sentinel D and terminal constant C match independent EC arithmetic', flush=True)
+
+bad = []
+for top in range(1, 4096, 2):
+    # Before the final window, |partial| < 2^252. Solve partial = top*2^252 (mod n).
+    w = top*(1 << 252) % N
+    for partial in (w, w-N):
+        if abs(partial) < 1 << 252:
+            kodd = partial + top*(1 << 252)
+            if 1 <= kodd < 2*N and kodd % 2:
+                bad.append(kodd)
+assert set(bad) == {KBAD}, [hex(x) for x in bad]
+t = (SRC/'comb_fixed.circom').read_text()
+vals = {int(i): int(v) for i, v in re.findall(r'badEq0\[(\d)\]\.in <== fold\.out\[\d\] - (\d+);', t)}
+assert sum(vals[i] << (64*i) for i in range(5)) == KBAD
+print('Final comb equal-point case: exhaustive odd top-digit search reproduces the k_bad in comb_fixed.circom', flush=True)
