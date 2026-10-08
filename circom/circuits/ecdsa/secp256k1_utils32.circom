@@ -127,24 +127,27 @@ template Secp256k1CheckModPIsZero32(regs, m, shift, kq, M, len, g, qbits) {
 }
 
 // Products of three field elements, |in| < 2^104: the chord of an addition and
-// the tangent of a doubling.
+// the tangent of a doubling. Carries over groups of four registers; five would
+// need M <= 121 for MG + 3 <= 253.
 template Secp256k1CheckCubicModPIsZero104() {
     signal input in[22];
-    component c = Secp256k1CheckModPIsZero32(22, 104, 82, 3, 125, 12, 1, 96);
+    component c = Secp256k1CheckModPIsZero32(22, 104, 82, 3, 125, 12, 4, 96);
     for (var i = 0; i < 22; i++) { c.in[i] <== in[i]; }
 }
 
 // Products of three field elements, |in| < 2^102: the curve equation.
+// Carries over groups of four registers.
 template Secp256k1CheckCubicModPIsZero102() {
     signal input in[22];
-    component c = Secp256k1CheckModPIsZero32(22, 102, 80, 3, 123, 12, 1, 96);
+    component c = Secp256k1CheckModPIsZero32(22, 102, 80, 3, 123, 12, 4, 96);
     for (var i = 0; i < 22; i++) { c.in[i] <== in[i]; }
 }
 
 // Products of two field elements, |in| < 2^69: the line of an addition.
+// Carries over groups of six registers.
 template Secp256k1CheckQuadraticModPIsZero69() {
     signal input in[15];
-    component c = Secp256k1CheckModPIsZero32(15, 69, 39, 2, 80, 11, 1, 64);
+    component c = Secp256k1CheckModPIsZero32(15, 69, 39, 2, 80, 11, 6, 64);
     for (var i = 0; i < 15; i++) { c.in[i] <== in[i]; }
 }
 

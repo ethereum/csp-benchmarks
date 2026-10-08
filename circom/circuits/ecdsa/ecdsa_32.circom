@@ -7,7 +7,7 @@ pragma circom 2.0.2;
 // witnesscalc-adapter requires the directory, the .cpp and the .dat to carry
 // that same name.
 //
-// Compiled with Circom 2.2.3 --O2: 517,578 nonlinear constraints, 517,578 total.
+// Compiled with Circom 2.2.3 --O2: 319,373 nonlinear constraints, 319,373 total.
 
 include "./ecdsa4_comb_verify.circom";
 
