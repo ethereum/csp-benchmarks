@@ -236,7 +236,7 @@ template ECDSA4CombVerify() {
     //
     // Equality of limbs means equality of values only for canonical
     // representations: [u1]G leaves the table through a one-hot selector and
-    // is canonical by construction, and Rx is range checked above.
+    // the range-checked additions, and Rx is range checked above.
     component xSame[8];
     signal xSameAcc[8];
     for (var j = 0; j < 8; j++) {
