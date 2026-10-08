@@ -163,6 +163,8 @@ async function ecdsa() {
                 // useFinalDouble is folded away by --O2; badAcc0[4] carries its value.
                 assert.equal(c.value(result.witness, 'main.u1G.badAcc0[4]'), v.comb_final_double ? 1n : 0n,
                     `${v.name}: unexpected comb final-doubling flag`);
+                assert.equal(c.value(result.witness, 'main.nonzeroU1SameX'), v.equal_x ? 1n : 0n,
+                    `${v.name}: unexpected equal-x subtraction flag`);
             }
             console.log(`ecdsa: ${v.name} ${v.expect} ok`);
         } catch (error) {

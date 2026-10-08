@@ -11,49 +11,6 @@ include "./scalarmul_func.circom";
 // secp256k1 has prime order, so no finite point has y = 0: the tangent
 // denominator 2*y is never zero and the double of a finite point is finite.
 
-// Returns [slope, x, y] of a+b, for distinct x (tangent = 0) or a = b
-// (tangent = 1). Witness generation only.
-function secp256k1_slope_add_func(n, k, x1, y1, x2, y2, tangent) {
-    var p[100] = get_secp256k1_prime(n, k);
-    var a[2][100];
-    var b[2][100];
-    for (var i = 0; i < 100; i++) {
-        a[0][i] = 0; a[1][i] = 0; b[0][i] = 0; b[1][i] = 0;
-    }
-    for (var i = 0; i < k; i++) {
-        a[0][i] = x1[i]; a[1][i] = y1[i]; b[0][i] = x2[i]; b[1][i] = y2[i];
-    }
-    var num[100];
-    var den[100];
-    if (tangent == 1) {
-        var three[100];
-        var two[100];
-        for (var i = 0; i < 100; i++) {
-            three[i] = i == 0 ? 3 : 0;
-            two[i] = i == 0 ? 2 : 0;
-        }
-        var xsq[100] = prod_mod_p(n, k, a[0], a[0], p);
-        num = prod_mod_p(n, k, xsq, three, p);
-        den = prod_mod_p(n, k, a[1], two, p);
-    } else {
-        num = long_sub_mod_p(n, k, b[1], a[1], p);
-        den = long_sub_mod_p(n, k, b[0], a[0], p);
-    }
-    var denInv[100] = mod_inv(n, k, den, p);
-    var lambda[100] = prod_mod_p(n, k, num, denInv, p);
-    var lsq[100] = prod_mod_p(n, k, lambda, lambda, p);
-    var xPre[100] = long_sub_mod_p(n, k, lsq, a[0], p);
-    var x3[100] = long_sub_mod_p(n, k, xPre, b[0], p);
-    var dx[100] = long_sub_mod_p(n, k, a[0], x3, p);
-    var ldx[100] = prod_mod_p(n, k, lambda, dx, p);
-    var y3[100] = long_sub_mod_p(n, k, ldx, a[1], p);
-    var out[3][100];
-    for (var i = 0; i < 100; i++) {
-        out[0][i] = lambda[i]; out[1][i] = x3[i]; out[2][i] = y3[i];
-    }
-    return out;
-}
-
 /*
     Complete a+b with a shared witnessed slope. The disjoint tangent
     (2*l*y = 3*x^2) and chord residuals share one modular certificate. The

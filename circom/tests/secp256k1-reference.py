@@ -91,6 +91,8 @@ for a in (1, -1):
 KBAD = 0xe00000000000000000000000000000014551231950b75fc4402da1732fc9bebf
 rr = mul(2)[0] % N
 custom('comb-final-doubling', KBAD, rr, 1, mul((2-KBAD)*pow(rr, -1, N)), comb_final_double=True)
+# u1 = 1 and Q = [-2/r]G give R = -G = -[u1]G: S = R - [u1]G is the doubling 2R.
+custom('equal-x-subtraction', 1, G[0], 1, mul(-2*pow(G[0], -1, N)), equal_x=True)
 rng = random.Random(309)
 for i in range(4): vector(f'random-{i}', rng.randrange(1, N), rng.randrange(1, N), rng.randrange(1, 1 << 256))
 
