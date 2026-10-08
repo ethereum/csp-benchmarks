@@ -8,10 +8,10 @@ rand = { workspace = true }
 utils = { workspace = true }
 criterion = { workspace = true }
 clap = { workspace = true }
-provekit-common = { git = "https://github.com/worldfnd/ProveKit", rev = "cc391c8cc72766cc47f8243402e7f51e16c6d7cd"}
-provekit-r1cs-compiler = { git = "https://github.com/worldfnd/ProveKit", rev = "cc391c8cc72766cc47f8243402e7f51e16c6d7cd"}
-provekit-prover = { git = "https://github.com/worldfnd/ProveKit", rev = "cc391c8cc72766cc47f8243402e7f51e16c6d7cd"}
-provekit-verifier = { git = "https://github.com/worldfnd/ProveKit", rev = "cc391c8cc72766cc47f8243402e7f51e16c6d7cd"}
+provekit-common = { git = "https://github.com/worldfnd/ProveKit", rev = "c87957a02a2618a0932abd85726040139e49091c" }
+provekit-r1cs-compiler = { git = "https://github.com/worldfnd/ProveKit", rev = "c87957a02a2618a0932abd85726040139e49091c" }
+provekit-prover = { git = "https://github.com/worldfnd/ProveKit", rev = "c87957a02a2618a0932abd85726040139e49091c" }
+provekit-verifier = { git = "https://github.com/worldfnd/ProveKit", rev = "c87957a02a2618a0932abd85726040139e49091c" }
 
 [[bin]]
 name = "sha256_mem_provekit"

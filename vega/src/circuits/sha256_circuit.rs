@@ -29,39 +29,38 @@ use bellpepper_core::{
 };
 use ff::Field;
 use sha2::{Digest, Sha256};
-use spartan2::traits::circuit::SpartanCircuit;
+use vega_prover::traits::circuit::VegaCircuit;
 
 #[derive(Clone, Debug)]
 pub struct Sha256Circuit {
     preimage: Vec<u8>,
+    digest: [u8; 32],
 }
 
 impl Sha256Circuit {
-    pub fn new(preimage: Vec<u8>) -> Self {
-        Self { preimage }
+    pub fn new(preimage: Vec<u8>, digest: [u8; 32]) -> Self {
+        Self { preimage, digest }
     }
 }
 
-impl SpartanCircuit<E> for Sha256Circuit {
-    fn public_values(&self) -> Result<Vec<Scalar>, SynthesisError> {
-        // Compute the SHA-256 hash of the preimage
-        let mut hasher = Sha256::new();
-        hasher.update(&self.preimage);
-        let hash = hasher.finalize();
-        // Convert the hash to a vector of scalars (one per bit)
-        let hash_scalars: Vec<Scalar> = hash
-            .iter()
-            .flat_map(|&byte| {
-                (0..8).rev().map(move |i| {
-                    if (byte >> i) & 1 == 1 {
-                        Scalar::ONE
-                    } else {
-                        Scalar::ZERO
-                    }
-                })
+pub(crate) fn digest_public_values(digest: &[u8; 32]) -> Vec<Scalar> {
+    digest
+        .iter()
+        .flat_map(|&byte| {
+            (0..8).rev().map(move |i| {
+                if (byte >> i) & 1 == 1 {
+                    Scalar::ONE
+                } else {
+                    Scalar::ZERO
+                }
             })
-            .collect();
-        Ok(hash_scalars)
+        })
+        .collect()
+}
+
+impl VegaCircuit<E> for Sha256Circuit {
+    fn public_values(&self) -> Result<Vec<Scalar>, SynthesisError> {
+        Ok(digest_public_values(&self.digest))
     }
 
     fn shared<CS: ConstraintSystem<Scalar>>(
@@ -118,9 +117,10 @@ impl SpartanCircuit<E> for Sha256Circuit {
             }
         }
 
+        let mut digest_nums = Vec::with_capacity(hash_bits.len());
         for (i, bit) in hash_bits.iter().enumerate() {
-            // Allocate public input
-            let n = AllocatedNum::alloc_input(cs.namespace(|| format!("public num {i}")), || {
+            // Carry the computed digest across Vega's precommitted and rest phases.
+            let n = AllocatedNum::alloc(cs.namespace(|| format!("digest num {i}")), || {
                 Ok(
                     if bit.get_value().ok_or(SynthesisError::AssignmentMissing)? {
                         Scalar::ONE
@@ -137,9 +137,10 @@ impl SpartanCircuit<E> for Sha256Circuit {
                 |lc| lc + CS::one(),
                 |lc| lc + n.get_variable(),
             );
+            digest_nums.push(n);
         }
 
-        Ok(vec![])
+        Ok(digest_nums)
     }
 
     fn num_challenges(&self) -> usize {
@@ -149,11 +150,55 @@ impl SpartanCircuit<E> for Sha256Circuit {
 
     fn synthesize<CS: ConstraintSystem<Scalar>>(
         &self,
-        _: &mut CS,
+        cs: &mut CS,
         _: &[AllocatedNum<Scalar>],
-        _: &[AllocatedNum<Scalar>],
+        precommitted: &[AllocatedNum<Scalar>],
         _: Option<&[Scalar]>,
     ) -> Result<(), SynthesisError> {
+        // Vega resets public assignments before this phase, so input allocation
+        // must happen here, after the precommitted witness has been generated.
+        for (i, (computed, expected)) in precommitted
+            .iter()
+            .zip(digest_public_values(&self.digest))
+            .enumerate()
+        {
+            let public = AllocatedNum::alloc_input(
+                cs.namespace(|| format!("public digest bit {i}")),
+                || Ok(expected),
+            )?;
+            cs.enforce(
+                || format!("computed == public digest bit {i}"),
+                |lc| lc + computed.get_variable(),
+                |lc| lc + CS::one(),
+                |lc| lc + public.get_variable(),
+            );
+        }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bellpepper_core::test_cs::TestConstraintSystem;
+
+    #[test]
+    fn sha256_constraints_reject_an_incorrect_public_digest() {
+        let preimage = vec![7u8];
+        let digest: [u8; 32] = Sha256::digest(&preimage).into();
+        for valid in [true, false] {
+            let mut expected = digest;
+            if !valid {
+                expected[0] ^= 1;
+            }
+            let circuit = Sha256Circuit::new(preimage.clone(), expected);
+            let mut cs = TestConstraintSystem::<Scalar>::new();
+            let shared = circuit.shared(&mut cs).unwrap();
+            let precommitted = circuit.precommitted(&mut cs, &shared).unwrap();
+            circuit
+                .synthesize(&mut cs, &shared, &precommitted, Some(&[]))
+                .unwrap();
+            assert_eq!(cs.is_satisfied(), valid);
+        }
     }
 }

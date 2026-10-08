@@ -9,7 +9,7 @@ utils::define_benchmark_harness!(
     PROVEKIT_PROPS,
     |_| None,
     prepare_keccak,
-    |(proof_scheme, _, _)| { proof_scheme.r1cs().num_constraints() },
+    |(proof_scheme, _, _)| { proof_scheme.r1cs.num_constraints() },
     |(proof_scheme, toml_path, _)| { prove(proof_scheme, toml_path) },
     |(proof_scheme, _, _), proof| {
         verify(proof, proof_scheme).unwrap();

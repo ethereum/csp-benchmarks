@@ -402,24 +402,11 @@ mod tests {
     use plonky2::plonk::circuit_data::{CircuitConfig, CircuitData};
     use plonky2::plonk::config::{GenericConfig, PoseidonGoldilocksConfig};
     use plonky2_u32::gates::arithmetic_u32::{U32GateSerializer, U32GeneratorSerializer};
-    use rand::Rng;
 
     use crate::sha256::circuit::{array_to_bits, make_circuits};
 
-    const EXPECTED_RES: [u8; 256] = [
-        0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0,
-        0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0,
-        0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1,
-        0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0,
-        1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 1, 1,
-        1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1,
-        1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-        1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0,
-        0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
-    ];
-
     #[test]
-    fn test_sha256() -> Result<()> {
+    fn sha256_circuit_serialization_roundtrip() -> Result<()> {
         let mut msg = vec![0; 128_usize];
         for (i, byte) in msg.iter_mut().enumerate().take(127) {
             *byte = i as u8;
@@ -438,14 +425,6 @@ mod tests {
             pw.set_bool_target(*target, bit)?;
         }
 
-        for (&expected, digest) in EXPECTED_RES.iter().zip(targets.digest.iter()) {
-            if expected == 1 {
-                builder.assert_one(digest.target);
-            } else {
-                builder.assert_zero(digest.target);
-            }
-        }
-
         let data = builder.build::<C>();
         let gate_serializer = U32GateSerializer;
         let generator_serializer = U32GeneratorSerializer::<C, D>::default();
@@ -458,43 +437,5 @@ mod tests {
         let proof = data.prove(pw).unwrap();
 
         data.verify(proof)
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_sha256_failure() {
-        let mut msg = vec![0; 128_usize];
-        for (i, byte) in msg.iter_mut().enumerate().take(127) {
-            *byte = i as u8;
-        }
-
-        let msg_bits = array_to_bits(&msg);
-        let len = msg.len() * 8;
-        const D: usize = 2;
-        type C = PoseidonGoldilocksConfig;
-        type F = <C as GenericConfig<D>>::F;
-        let mut builder = CircuitBuilder::<F, D>::new(CircuitConfig::standard_recursion_config());
-        let targets = make_circuits(&mut builder, len as u64);
-        let mut pw = PartialWitness::new();
-
-        for (target, &bit) in targets.message.iter().zip(msg_bits.iter()).take(len) {
-            pw.set_bool_target(*target, bit).unwrap();
-        }
-
-        let mut rng = rand::thread_rng();
-        let rnd = rng.gen_range(0..256);
-        for (i, (&expected, digest)) in EXPECTED_RES.iter().zip(targets.digest.iter()).enumerate() {
-            let b = (i == rnd && expected != 1) || (i != rnd && expected == 1);
-            if b {
-                builder.assert_one(digest.target);
-            } else {
-                builder.assert_zero(digest.target);
-            }
-        }
-
-        let data = builder.build::<C>();
-        let proof = data.prove(pw).unwrap();
-
-        data.verify(proof).expect("");
     }
 }

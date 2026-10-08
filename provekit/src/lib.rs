@@ -1,6 +1,6 @@
-use provekit_common::{HashConfig, NoirProof, NoirProofScheme, Prover, Verifier, file::serialize};
+use provekit_common::{NoirProof, NoirProofScheme, Prover, Verifier, file::serialize};
 use provekit_prover::Prove;
-use provekit_r1cs_compiler::NoirCompiler;
+use provekit_r1cs_compiler::NoirProofSchemeBuilder;
 use provekit_verifier::Verify;
 use std::borrow::Cow;
 use std::fs;
@@ -9,7 +9,7 @@ use std::process::Command;
 use utils::generate_ecdsa_input;
 use utils::harness::{AuditStatus, BenchProperties};
 
-const WORKSPACE_ROOT: &str = "circuits";
+const NOIR_VERSION: &str = "1.0.0-beta.26";
 
 pub const PROVEKIT_PROPS: BenchProperties = BenchProperties {
     proving_system: Cow::Borrowed("Spartan+WHIR"), // https://github.com/worldfnd/provekit
@@ -17,9 +17,9 @@ pub const PROVEKIT_PROPS: BenchProperties = BenchProperties {
     iop: Cow::Borrowed("Spartan"),                 // https://github.com/worldfnd/provekit
     pcs: Some(Cow::Borrowed("WHIR")),              // https://github.com/worldfnd/provekit
     arithm: Cow::Borrowed("R1CS"),                 // https://github.com/worldfnd/provekit
-    is_zk: true,                                   // https://github.com/worldfnd/provekit/pull/138
+    is_zk: true, // https://github.com/worldfnd/provekit/blob/c87957a02a2618a0932abd85726040139e49091c/provekit/prover/src/whir_r1cs.rs
     is_zkvm: false,
-    security_bits: 128, // https://github.com/worldfnd/provekit/blob/d7deea66c41d56c1d411dd799d0d6066272323e4/provekit/r1cs-compiler/src/whir_r1cs.rs#L43
+    security_bits: 128, // https://github.com/worldfnd/provekit/blob/c87957a02a2618a0932abd85726040139e49091c/provekit/r1cs-compiler/src/whir_r1cs.rs#L75
     is_pq: true,        // hash-based PCS
     is_maintained: true, // https://github.com/worldfnd/provekit
     is_audited: AuditStatus::NotAudited,
@@ -27,14 +27,26 @@ pub const PROVEKIT_PROPS: BenchProperties = BenchProperties {
 };
 
 fn workspace_root() -> PathBuf {
-    std::env::current_dir()
-        .expect("Failed to get current directory")
-        .join(WORKSPACE_ROOT)
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("circuits")
 }
 
 fn compile_package(package: &str) -> (NoirProofScheme, PathBuf) {
     let workspace_root = workspace_root();
-    let output = Command::new("nargo")
+    let nargo = std::env::var_os("PROVEKIT_NARGO")
+        .or_else(|| std::env::var_os("NARGO_BIN"))
+        .unwrap_or_else(|| "nargo".into());
+    let version = Command::new(&nargo)
+        .arg("--version")
+        .output()
+        .expect("Failed to run nargo --version");
+    assert!(
+        version.status.success()
+            && String::from_utf8_lossy(&version.stdout)
+                .lines()
+                .any(|line| line.trim() == format!("nargo version = {NOIR_VERSION}")),
+        "ProveKit WHIR requires nargo {NOIR_VERSION}; select it with PROVEKIT_NARGO"
+    );
+    let output = Command::new(&nargo)
         .args([
             "compile",
             "--package",
@@ -54,22 +66,15 @@ fn compile_package(package: &str) -> (NoirProofScheme, PathBuf) {
     let circuit_path = workspace_root
         .join("target")
         .join(format!("{package}.json"));
-    let proof_scheme = NoirCompiler::from_file(&circuit_path, HashConfig::default())
+    let proof_scheme = NoirProofScheme::from_file(&circuit_path)
         .unwrap_or_else(|e| panic!("Failed to load proof scheme for {package}: {e}"));
     (proof_scheme, circuit_path)
 }
 
-// Map a package name like "csp_sha256_128" to the circuit's directory under
-// `circuits/`. Upstream layout uses the same suffix as the directory name.
-fn package_dir(package: &str) -> PathBuf {
-    let suffix = package.strip_prefix("csp_").unwrap_or(package);
-    workspace_root().join(suffix)
-}
-
 fn write_prover_toml(package: &str, content: &str) -> PathBuf {
-    let dir = package_dir(package);
+    let dir = workspace_root().join("target").join("inputs");
     fs::create_dir_all(&dir).expect("Failed to create circuit dir");
-    let toml_path = dir.join("Prover.toml");
+    let toml_path = dir.join(format!("{package}.toml"));
     fs::write(&toml_path, content).expect("Failed to write Prover.toml");
     toml_path
 }
@@ -168,4 +173,31 @@ pub fn preprocessing_size(proof_scheme: &NoirProofScheme) -> usize {
     serialize(&prover)
         .expect("serialize Prover to .pkp bytes")
         .len()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::compile_package;
+
+    #[test]
+    fn ecdsa_circuit_exposes_digest_and_key() {
+        let (scheme, _) = compile_package("csp_ecdsa_p256");
+        let abi = scheme.witness_generator.abi();
+        for name in ["hashed_message", "pub_key_x", "pub_key_y"] {
+            assert!(
+                abi.parameters
+                    .iter()
+                    .find(|p| p.name == name)
+                    .unwrap()
+                    .is_public()
+            );
+        }
+        assert!(
+            !abi.parameters
+                .iter()
+                .find(|p| p.name == "signature")
+                .unwrap()
+                .is_public()
+        );
+    }
 }

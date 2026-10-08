@@ -175,7 +175,7 @@
       "iop": "Spartan",
       "pcs": "Hyrax",
       "arithm": "R1CS",
-      "is_zk": true,
+      "is_zk": false,
       "is_zkvm": false,
       "security_bits": 128,
       "is_pq": false,

@@ -3,23 +3,22 @@ resolver = "3"
 members = [
     "plonky2",
     "provekit",
-    "provekit-groth16",
     "polyhedra-expander",
     "circom",
     "halo2",
     "jolt",
     "miden",
     "risc0",
-    "spartan2",
+    "vega",
     "flock",
     "utils",
 ]
 exclude = [
-    # TODO: Move binius64 back into the workspace once worldfnd/ProveKit updates
-    # its outdated keccak dependency. It currently pins keccak 0.2.0-rc.2, while
-    # latest Binius pulls sha3 0.12 -> keccak 0.2.0, so one workspace resolver
-    # cannot satisfy both versions.
+    # Binius64 uses its own Rust toolchain.
     "binius64",
+    # Groth16's Noir beta.19 pins keccak 0.2.0-rc.2; WHIR v1's beta.26
+    # requires keccak 0.2 stable. Cargo cannot resolve both in one workspace.
+    "provekit-groth16",
     "cairo-m",
     "rookie-numbers",
     "stark-v",

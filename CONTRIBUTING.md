@@ -2,6 +2,8 @@
 
 Howdy! Usual good software engineering practices apply. Write comments. If your codebase is written in Rust, follow standard Rust coding practices where possible, and use `cargo fmt` and `cargo clippy` to tidy up formatting.
 
+Tests cover benchmark code, circuits, and integrations maintained in this repository. Do not add correctness tests for unchanged upstream proving systems or circuits; those tests belong upstream.
+
 ## Benchmark Eligibility
 
 - To keep benchmarks meaningful for practical deployments, we only include systems with at least 96 bits of security.

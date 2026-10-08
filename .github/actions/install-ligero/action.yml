@@ -46,7 +46,7 @@ runs:
       run: |
         set -euo pipefail
         NEEDS=()
-        for pkg in cmake ninja gmp mpfr libomp llvm boost nlohmann-json ccache; do
+        for pkg in cmake ninja gmp mpfr libomp llvm boost nlohmann-json protobuf ccache; do
           brew list --versions "$pkg" >/dev/null 2>&1 || NEEDS+=("$pkg")
         done
         if [[ ${#NEEDS[@]} -gt 0 ]]; then
@@ -185,6 +185,7 @@ runs:
         cmake -S "${{ inputs.ligero_path }}" -B "${{ inputs.ligero_path }}/build" \
               -G Ninja \
               -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_NO_SYSTEM_FROM_IMPORTED=ON \
               -DCMAKE_PREFIX_PATH="${{ inputs.install_prefix }}"
         cmake --build "${{ inputs.ligero_path }}/build" --parallel
 

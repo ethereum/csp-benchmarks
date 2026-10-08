@@ -1,16 +1,16 @@
 # ProveKit-Groth16 benchmarks
 
-Groth16+BSB22 sibling of [`provekit/`](../provekit), pinned to
-[`worldfnd/ProveKit@622c276f`](https://github.com/worldfnd/ProveKit/commit/622c276fdea28c3c020705e2df71d20870f415ce).
+Groth16+BSB22 sibling of [`provekit/`](../provekit), pinned to [`worldfnd/ProveKit@b910fe8`](https://github.com/worldfnd/ProveKit/commit/b910fe8da2b909bb84f0c48a5078101369bfb435).
 
 ## Prerequisites
 
-Same Noir + Rust toolchain as the WHIR `provekit/` crate. See [`../provekit/README.md`](../provekit/README.md).
+Use Noir 1.0.0-beta.19. This crate has a separate Cargo workspace because its Noir dependencies conflict with the WHIR v1 backend.
 
 ## Benchmarking
 
 ```bash
-cargo bench -p provekit-groth16-bench
+cd provekit-groth16
+cargo bench --locked
 ```
 
 ## Trusted setup

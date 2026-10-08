@@ -13,8 +13,11 @@ OUT_JSON="$SIZES_JSON"
 BASENAME="$(basename "$SIZES_JSON")"
 TARGET_NAME="${BASENAME%%_[0-9]*}"
 
-# Run one proving cycle to generate artifacts for measurement
-"$SCRIPT_DIR/prove.sh" >/dev/null 2>&1 || true
+# Generate a fresh proof and capture its constraint counts in the same run.
+if ! DUMMY_OUTPUT="$("$SCRIPT_DIR/prove.sh" 2>&1)"; then
+  printf '%s\n' "$DUMMY_OUTPUT" >&2
+  exit 1
+fi
 
 # In Ligetron, the prover writes a proof file named proof_data.gz in the current working directory.
 proof_path="${PWD}/proof_data.gz"
@@ -42,11 +45,9 @@ echo "$json_output" > "$OUT_JSON"
 jq . "$OUT_JSON" || true
 
 # === Compute and update circuit_sizes.json (Ligetron) ===
-# Perform a dummy proving run to capture constraint counts from Stage 1
+# Parse the constraint counts from the successful proving run.
 PROVER_BIN="${SCRIPT_DIR}/ligero-prover/build/webgpu_prover"
 if [[ -x "$PROVER_BIN" ]]; then
-  DUMMY_OUTPUT="$($PROVER_BIN "$(cat "$STATE_JSON")" 2>&1 || true)"
-
   # Extract first-stage linear and quadratic counts and sum them
   CONSTRAINTS_SUM=$(printf "%s\n" "$DUMMY_OUTPUT" | awk '
     /^Start Stage 1/ { in_s1=1; next }
@@ -76,7 +77,11 @@ if [[ -x "$PROVER_BIN" ]]; then
 
       printf "%s\n" "$UPDATED_JSON" > "$CONSTRAINTS_JSON_PATH"
     fi
+  else
+    echo "Ligetron Stage 1 constraint counts missing from prover output" >&2
+    exit 1
   fi
 else
-  echo "Warning: Ligetron prover binary not found; skipping constraints generation" >&2
+  echo "Ligetron prover binary not found" >&2
+  exit 1
 fi

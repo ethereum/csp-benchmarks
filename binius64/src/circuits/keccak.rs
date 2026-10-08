@@ -62,8 +62,8 @@ impl CircuitTrait for KeccakCircuit {
         assert!(message_len_bytes <= self.max_len_bytes);
         self.message.populate_data(w, &message_bytes);
         self.message.populate_len_bytes(w, message_len_bytes);
-        for (wire, bytes) in self.digest.iter().zip(digest_bytes.chunks_exact(8)) {
-            w[*wire] = Word(u64::from_le_bytes(bytes.try_into().unwrap()));
+        for (wire, bytes) in self.digest.iter().zip(digest_bytes.as_chunks::<8>().0) {
+            w[*wire] = Word(u64::from_le_bytes(*bytes));
         }
 
         Ok(())

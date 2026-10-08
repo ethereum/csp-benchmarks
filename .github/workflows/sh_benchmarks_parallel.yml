@@ -127,6 +127,10 @@ jobs:
           ligero_path: ./ligetron/ligero-prover
           install_prefix: ${{ github.workspace }}/.deps/install
 
+      - name: Build Ligetron benchmark programs
+        if: ${{ matrix.folder == 'ligetron' }}
+        run: bash ./ligetron/build_programs.sh
+
       - name: Setup Nargo (only when folder is barretenberg)
         if: ${{ matrix.folder == 'barretenberg' }}
         uses: ./.github/actions/install-nargo

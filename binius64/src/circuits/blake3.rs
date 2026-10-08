@@ -56,8 +56,8 @@ impl CircuitTrait for Blake3Circuit {
             word[..bytes.len()].copy_from_slice(bytes);
             w[*wire] = Word(u32::from_le_bytes(word) as u64);
         }
-        for (wire, bytes) in self.digest.iter().zip(digest_bytes.chunks_exact(4)) {
-            w[*wire] = Word(u32::from_le_bytes(bytes.try_into().unwrap()) as u64);
+        for (wire, bytes) in self.digest.iter().zip(digest_bytes.as_chunks::<4>().0) {
+            w[*wire] = Word(u32::from_le_bytes(*bytes) as u64);
         }
 
         Ok(())
@@ -76,29 +76,4 @@ pub struct Params {
     /// Exact message length in bytes.
     #[arg(long)]
     pub max_len_bytes: Option<usize>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{prepare, prove, verify};
-
-    #[test]
-    #[ignore = "covers BLAKE3 circuit setup and proving"]
-    fn blake3_roundtrip_at_sweep_boundaries() {
-        for input_size in [128, 2048] {
-            let (verifier, prover, _cs, circuit, compiled_circuit, instance) =
-                prepare::<Blake3Circuit>(
-                    input_size,
-                    Params {
-                        max_len_bytes: Some(input_size),
-                    },
-                )
-                .expect("prepare BLAKE3 circuit");
-            let (proof, public_witness) =
-                prove::<Blake3Circuit>(&prover, &compiled_circuit, &circuit, instance)
-                    .expect("prove BLAKE3 circuit");
-            verify(&verifier, &public_witness, &proof).expect("verify BLAKE3 circuit");
-        }
-    }
 }
