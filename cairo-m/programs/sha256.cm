@@ -102,12 +102,12 @@ fn process_chunk(chunk: [u32; 16], H: [u32; 8]) {
 /// Computes SHA-256 hash of a pre-padded message.
 ///
 /// ## Arguments
-/// * `padded_message` - A buffer of 528 u32 words (2048 bytes)
+/// * `padded_message` - A buffer of 528 u32 words, including SHA-256 padding
 /// * `num_chunks` - The number of 16-word (64-byte) chunks to process
 ///
 /// ## Returns
-/// The SHA-256 hash as an array of 8 u32 words
-fn sha256_hash(padded_message: [u32; 528], num_chunks: felt) -> [u32; 8] {
+/// The SHA-256 hash as eight u32 return values
+fn sha256_hash(padded_message: [u32; 528], num_chunks: felt) -> (u32, u32, u32, u32, u32, u32, u32, u32) {
     let H: [u32; 8] = [
         1779033703,
         3144134277,
@@ -126,5 +126,5 @@ fn sha256_hash(padded_message: [u32; 528], num_chunks: felt) -> [u32; 8] {
         }
         process_chunk(current_chunk, H);
     }
-    return H;
+    return (H[0], H[1], H[2], H[3], H[4], H[5], H[6], H[7]);
 }

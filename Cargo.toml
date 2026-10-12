@@ -7,13 +7,14 @@ members = [
     "circom",
     "halo2",
     "jolt",
-    "miden",
     "risc0",
     "vega",
     "flock",
     "utils",
 ]
 exclude = [
+    # Miden's BLAKE3 dependency conflicts with ProveKit's exact version.
+    "miden",
     # Binius64 uses its own Rust toolchain.
     "binius64",
     # Groth16's Noir beta.19 pins keccak 0.2.0-rc.2; WHIR v1's beta.26
@@ -30,7 +31,7 @@ bincode = "1.3"
 blake3 = { version = "1.8", default-features = false }
 clap = { version = "4.5", features = ["derive", "env"] }
 criterion = "0.5"
-ere-zkvm-interface = { git = "https://github.com/eth-act/ere", rev = "6573843" }
+ere-zkvm-interface = { git = "https://github.com/Client-Side-Proving/ere", rev = "c9527535fb7976aee30727c3d3bd87a792c423d1" }
 env_logger = "0.10"
 hex = "0.4"
 itertools = "0.13"
@@ -51,4 +52,3 @@ ark-ff = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist
 ark-ec = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
 ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
 ark-bn254 = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
-allocative = { git = "https://github.com/facebookexperimental/allocative", rev = "85b773d85d526d068ce94724ff7a7b81203fc95e" }

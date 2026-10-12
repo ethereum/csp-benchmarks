@@ -3,13 +3,25 @@ name = "miden"
 version = "0.1.0"
 edition = "2024"
 
-[features]
-miden-ecdsa-bench = []
+[workspace]
+resolver = "3"
+
+[workspace.dependencies]
+bincode = "1.3"
+clap = { version = "4.5", features = ["derive", "env"] }
+criterion = "0.5"
+ere-zkvm-interface = { git = "https://github.com/Client-Side-Proving/ere", rev = "c9527535fb7976aee30727c3d3bd87a792c423d1" }
+utils = { path = "../utils" }
+
+[patch.crates-io]
+ark-ff = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
+ark-ec = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
+ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
+ark-bn254 = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
 
 [dependencies]
-ere-miden = { git = "https://github.com/eth-act/ere", rev = "6573843" }
+ere-miden = { git = "https://github.com/Client-Side-Proving/ere", rev = "c9527535fb7976aee30727c3d3bd87a792c423d1" }
 bincode = { workspace = true }
-k256 = { workspace = true }
 
 # Workspace
 criterion = { workspace = true }
@@ -28,7 +40,6 @@ harness = false
 [[bench]]
 name = "ecdsa"
 harness = false
-required-features = ["miden-ecdsa-bench"]
 
 [[bin]]
 name = "sha256_mem_miden"
@@ -41,4 +52,3 @@ path = "src/bin/blake3_mem.rs"
 [[bin]]
 name = "ecdsa_mem_miden"
 path = "src/bin/ecdsa_mem.rs"
-required-features = ["miden-ecdsa-bench"]

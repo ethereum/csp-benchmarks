@@ -15,6 +15,6 @@ fn main() {
 }
 
 fn sha256_mem(input_size: usize) {
-    let (program, (entrypoint_name, runner_inputs)) = prepare(input_size, &compile_program());
-    let _ = prove(&program, (&entrypoint_name, &runner_inputs));
+    let prepared = prepare(input_size, &compile_program());
+    let _ = prove(&prepared);
 }

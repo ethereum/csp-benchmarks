@@ -66,7 +66,6 @@ pub fn prepare_blake3(
     input_size: usize,
     program: &CompiledProgram<RustRv64imacCustomized>,
 ) -> PreparedBlake3<EreJolt> {
-    // The pinned Dory verifier requires this cap even when the execution trace is shorter.
     let max_trace_length = 131072;
     set_jolt_config(max_trace_length, 4096, 32768);
     let vm = EreJolt::new(program.program.clone(), ProverResource::Cpu)
@@ -158,8 +157,9 @@ fn build_ecdsa_jolt_input(
 mod tests {
     use super::*;
     use ere_zkvm_interface::zkVM;
-    use utils::zkvm::BLAKE3_BENCH;
     use utils::zkvm::helpers::load_or_compile_program;
+    use utils::zkvm::{BLAKE3_BENCH, ECDSA_BENCH, KECCAK_BENCH, SHA256_BENCH};
+    use utils::zkvm::{compile_guest_program, guest_dir};
 
     #[test]
     #[ignore = "compiles and executes the Jolt guest toolchain"]
@@ -190,5 +190,42 @@ mod tests {
         let prepared = prepare_blake3(2048, &program);
         let proof = prove_blake3(&prepared, &program);
         verify_blake3(&prepared, &proof, &(&program));
+    }
+
+    fn compile_fresh(benchmark: &str) -> CompiledProgram<RustRv64imacCustomized> {
+        let original_dir = env::current_dir().unwrap();
+        let program = compile_guest_program(&RustRv64imacCustomized, &guest_dir(benchmark));
+        env::set_current_dir(original_dir).unwrap();
+        program.expect("Jolt benchmark guest compilation must succeed")
+    }
+
+    #[test]
+    #[ignore = "compiles and proves all Jolt benchmark guests"]
+    fn benchmark_proof_roundtrips() {
+        type PrepareHash =
+            fn(usize, &CompiledProgram<RustRv64imacCustomized>) -> PreparedSha256<EreJolt>;
+        for (benchmark, prepare) in [
+            (SHA256_BENCH, prepare_sha256 as PrepareHash),
+            (KECCAK_BENCH, prepare_keccak as PrepareHash),
+            (BLAKE3_BENCH, prepare_blake3 as PrepareHash),
+        ] {
+            let program = compile_fresh(benchmark);
+            let prepared = prepare(128, &program);
+            let (output, _) = prepared.vm().execute(prepared.input()).unwrap();
+            assert_eq!(output, prepared.expected_digest().unwrap());
+            let proof = prepared.prove().unwrap();
+            prepared.verify_with_digest(&proof).unwrap();
+
+            let mut incorrect_digest = proof;
+            incorrect_digest.public_values[0] ^= 1;
+            assert!(prepared.verify_with_digest(&incorrect_digest).is_err());
+        }
+
+        let program = compile_fresh(ECDSA_BENCH);
+        let prepared = prepare_ecdsa(32, &program);
+        let (output, _) = prepared.vm().execute(prepared.input()).unwrap();
+        assert_eq!(output, [1]);
+        let proof = prove_ecdsa(&prepared, &program);
+        verify_ecdsa(&prepared, &proof, &program);
     }
 }

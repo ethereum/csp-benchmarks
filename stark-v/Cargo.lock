@@ -24,6 +24,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "air"
+version = "0.1.0"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
+dependencies = [
+ "debug-utils",
+ "itertools 0.13.0",
+ "num-traits",
+ "rustc-hash",
+ "simd",
+ "stwo",
+ "stwo-constraint-framework",
+ "stwo-macros",
+]
+
+[[package]]
 name = "allocator-api2"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -829,7 +844,7 @@ dependencies = [
 [[package]]
 name = "debug-utils"
 version = "0.0.1"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
  "comfy-table",
  "stwo",
@@ -1019,22 +1034,8 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "ere-zkvm-interface"
-version = "0.2.0"
-source = "git+https://github.com/eth-act/ere?rev=66c516a24d9c3549f76b84f72365ab544299e63a#66c516a24d9c3549f76b84f72365ab544299e63a"
-dependencies = [
- "anyhow",
- "auto_impl",
- "bincode 2.0.1",
- "indexmap 2.13.0",
- "serde",
- "strum",
- "thiserror",
-]
-
-[[package]]
-name = "ere-zkvm-interface"
 version = "0.3.0"
-source = "git+https://github.com/eth-act/ere?rev=6573843#65738437e805d6001eeca94b2f40464e41759f64"
+source = "git+https://github.com/Client-Side-Proving/ere?rev=c9527535fb7976aee30727c3d3bd87a792c423d1#c9527535fb7976aee30727c3d3bd87a792c423d1"
 dependencies = [
  "anyhow",
  "auto_impl",
@@ -1079,9 +1080,9 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
 name = "foldhash"
-version = "0.2.0"
+version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
+checksum = "d9c4f5dac5e15c24eb999c26181a6ca40b39fe946cbe4c263c7209467bc83af2"
 
 [[package]]
 name = "generic-array"
@@ -1138,7 +1139,7 @@ dependencies = [
 [[package]]
 name = "guest-lib"
 version = "0.1.0"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
  "k256",
  "postcard",
@@ -1186,6 +1187,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
 dependencies = [
  "allocator-api2",
+ "equivalent",
+ "foldhash",
+ "serde",
 ]
 
 [[package]]
@@ -1193,13 +1197,6 @@ name = "hashbrown"
 version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "841d1cc9bed7f9236f321df977030373f4a4163ae1a7dbfe1a51a2c1a51d9100"
-dependencies = [
- "allocator-api2",
- "equivalent",
- "foldhash",
- "serde",
- "serde_core",
-]
 
 [[package]]
 name = "heapless"
@@ -1681,8 +1678,9 @@ dependencies = [
 [[package]]
 name = "prover"
 version = "0.1.0"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
+ "air",
  "bytemuck",
  "debug-utils",
  "itertools 0.13.0",
@@ -1833,8 +1831,9 @@ dependencies = [
 [[package]]
 name = "runner"
 version = "0.1.0"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
+ "air",
  "clap",
  "debug-utils",
  "goblin",
@@ -2095,7 +2094,7 @@ dependencies = [
 [[package]]
 name = "simd"
 version = "0.1.0"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
  "stwo",
 ]
@@ -2138,7 +2137,7 @@ dependencies = [
  "bincode 1.3.3",
  "clap",
  "criterion",
- "ere-zkvm-interface 0.2.0",
+ "ere-zkvm-interface",
  "stark-v-sdk",
  "utils",
 ]
@@ -2146,11 +2145,11 @@ dependencies = [
 [[package]]
 name = "stark-v-sdk"
 version = "0.1.0"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
  "anyhow",
  "cargo_metadata",
- "ere-zkvm-interface 0.2.0",
+ "ere-zkvm-interface",
  "guest-lib",
  "postcard",
  "prover",
@@ -2243,8 +2242,8 @@ dependencies = [
 
 [[package]]
 name = "stwo"
-version = "2.1.0"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+version = "2.2.0"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
  "blake2",
  "blake3",
@@ -2253,7 +2252,7 @@ dependencies = [
  "dashmap",
  "educe 0.5.11",
  "fnv",
- "hashbrown 0.16.1",
+ "hashbrown 0.15.5",
  "hex",
  "indexmap 2.13.0",
  "itertools 0.13.0",
@@ -2271,14 +2270,13 @@ dependencies = [
 
 [[package]]
 name = "stwo-constraint-framework"
-version = "2.1.0"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+version = "2.2.0"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
- "hashbrown 0.16.1",
+ "hashbrown 0.15.5",
  "itertools 0.13.0",
  "num-traits",
  "rand",
- "rayon",
  "stwo",
  "stwo-std-shims",
  "tracing",
@@ -2287,7 +2285,7 @@ dependencies = [
 [[package]]
 name = "stwo-macros"
 version = "0.1.0"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2560,7 +2558,7 @@ dependencies = [
  "clap",
  "criterion",
  "csv",
- "ere-zkvm-interface 0.3.0",
+ "ere-zkvm-interface",
  "glob",
  "hex",
  "human-repr",

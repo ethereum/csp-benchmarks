@@ -1,9 +1,6 @@
 use ere_miden::{EreMiden, compiler::MidenAsm};
 use ere_zkvm_interface::{Input, ProverResource};
-use k256::ecdsa::{RecoveryId, Signature, VerifyingKey};
-use k256::{EncodedPoint, FieldBytes};
 use std::collections::BTreeMap;
-use std::convert::TryInto;
 use utils::harness::{AuditStatus, BenchProperties};
 use utils::zkvm::{CompiledProgram, PreparedBlake3, PreparedEcdsa, PreparedSha256, ProofArtifacts};
 
@@ -52,9 +49,9 @@ pub fn miden_bench_properties() -> BenchProperties {
         "STARK",      // https://0xmiden.github.io/miden-vm/intro/main.html
         Some("FRI"), // https://0xmiden.github.io/miden-vm/user_docs/assembly/cryptographic_operations.html#fri-folding
         "AIR", // https://0xmiden.github.io/miden-vm/design/chiplets/hasher.html?highlight=AIR#air-constraints
-        false, // Not using HidingFriPcs, using TwoAdicFriPcs without hiding
+        false, // Miden execution proofs do not hide the trace.
         true,  // zkVM
-        94, // Crites-Stewart re-estimate of the benchmark FRI config; see results/stark_fri_security_report.md
+        96, // Miden 0.34's verified conjectured bound; the adapter requires 96 bits for every STARK.
         true, // hash-based PCS
         true, // https://github.com/0xPolygonMiden/miden-vm/releases
         AuditStatus::NotAudited, // https://github.com/0xPolygonMiden/miden-vm
@@ -133,7 +130,7 @@ fn build_input(data: Vec<u8>) -> Input {
         .collect();
     words.resize(words_needed, 0);
 
-    for block in words.chunks_exact(4) {
+    for block in words.as_chunks::<4>().0 {
         for &word in block.iter().rev() {
             stdin.extend_from_slice(&(word as u64).to_le_bytes());
         }
@@ -142,11 +139,12 @@ fn build_input(data: Vec<u8>) -> Input {
 }
 
 fn decode_public_values(raw: &[u8]) -> Vec<u8> {
-    raw.chunks_exact(8)
+    raw.as_chunks::<8>()
+        .0
+        .iter()
         .take(8)
         .flat_map(|chunk| {
-            let word =
-                u64::from_le_bytes(chunk.try_into().expect("invalid miden output chunk")) as u32;
+            let word = u64::from_le_bytes(*chunk) as u32;
             word.to_be_bytes()
         })
         .collect()
@@ -154,11 +152,12 @@ fn decode_public_values(raw: &[u8]) -> Vec<u8> {
 
 // BLAKE3 serializes each output word little-endian, unlike SHA-256.
 fn decode_blake3_public_values(raw: &[u8]) -> Vec<u8> {
-    raw.chunks_exact(8)
+    raw.as_chunks::<8>()
+        .0
+        .iter()
         .take(8)
         .flat_map(|chunk| {
-            let word =
-                u64::from_le_bytes(chunk.try_into().expect("invalid miden output chunk")) as u32;
+            let word = u64::from_le_bytes(*chunk) as u32;
             word.to_le_bytes()
         })
         .collect()
@@ -172,10 +171,12 @@ fn build_blake3_input(data: &[u8]) -> Input {
 
     let mut stdin = Vec::with_capacity(data.len() * 2);
 
-    for block in data.chunks_exact(64) {
+    for block in data.as_chunks::<64>().0 {
         let words: Vec<u32> = block
-            .chunks_exact(4)
-            .map(|chunk| u32::from_le_bytes(chunk.try_into().expect("four-byte word")))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|chunk| u32::from_le_bytes(*chunk))
             .collect();
 
         // The advice tape is a queue. Pushing m15 first leaves m0 at stack top.
@@ -212,13 +213,7 @@ pub fn prepare_ecdsa(
 
     let (digest, (pub_key_x, pub_key_y), signature) = utils::generate_ecdsa_k256_input();
 
-    let compressed_pk = compress_public_key(&pub_key_x, &pub_key_y)?;
-    let recovery_id = compute_recovery_id(&digest, &signature, &pub_key_x, &pub_key_y)?;
-
-    let mut signature_with_recovery = signature;
-    signature_with_recovery.push(recovery_id);
-
-    let input = build_ecdsa_input(&compressed_pk, &digest, &signature_with_recovery);
+    let input = build_ecdsa_input(&pub_key_x, &pub_key_y, &digest, &signature);
 
     Ok(PreparedEcdsa::with_expected_values(
         vm,
@@ -241,100 +236,74 @@ pub fn verify_ecdsa(
         return Err("public values mismatch");
     }
 
-    let result = u64::from_le_bytes(
-        proof.public_values[..8]
-            .try_into()
-            .map_err(|_| "invalid miden output")?,
-    );
-    if result != 1 {
-        return Err("ECDSA verification failed in guest");
+    check_ecdsa_public_values(prepared, &public_values)
+}
+
+fn native_u32_limbs(bytes: &[u8]) -> Vec<u64> {
+    bytes
+        .rchunks_exact(4)
+        .map(|chunk| u32::from_be_bytes(chunk.try_into().expect("four-byte limb")) as u64)
+        .collect()
+}
+
+fn build_ecdsa_input(pub_key_x: &[u8], pub_key_y: &[u8], digest: &[u8], signature: &[u8]) -> Input {
+    let words = native_u32_limbs(digest)
+        .into_iter()
+        .chain(native_u32_limbs(pub_key_x))
+        .chain(native_u32_limbs(pub_key_y))
+        .chain(native_u32_limbs(&signature[..32]))
+        .chain(native_u32_limbs(&signature[32..]));
+    Input::new().with_stdin(words.flat_map(u64::to_le_bytes).collect::<Vec<_>>())
+}
+
+fn check_ecdsa_public_values(
+    prepared: &PreparedEcdsa<EreMiden>,
+    public_values: &[u8],
+) -> Result<(), &'static str> {
+    use ere_miden::zkvm::{Felt, crypto::hash::Poseidon2, field::QuotientMap};
+
+    if public_values.len() != 16 * 8 {
+        return Err("invalid Miden output length");
+    }
+    let (key_x, key_y) = prepared
+        .expected_public_key()
+        .ok_or("missing expected public key")?;
+    let key_limbs: Vec<Felt> = native_u32_limbs(key_x)
+        .into_iter()
+        .chain(native_u32_limbs(key_y))
+        .map(Felt::from_int)
+        .collect();
+    let expected_key =
+        ere_miden::zkvm::felts_to_bytes(Poseidon2::hash_elements(&key_limbs).as_elements());
+    if public_values[..32] != expected_key {
+        return Err("public key mismatch");
+    }
+    let digest: Vec<u8> = public_values[32..96]
+        .rchunks_exact(8)
+        .map(|chunk| u64::from_le_bytes(chunk.try_into().expect("eight-byte felt")))
+        .map(|word| u32::try_from(word).map(u32::to_be_bytes))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| "invalid digest limb")?
+        .into_iter()
+        .flatten()
+        .collect();
+    if digest
+        != prepared
+            .expected_message()
+            .ok_or("missing expected message")?
+    {
+        return Err("message digest mismatch");
+    }
+    if public_values[96..].iter().any(|byte| *byte != 0) {
+        return Err("invalid Miden output padding");
     }
     Ok(())
-}
-
-fn compress_public_key(pub_key_x: &[u8], pub_key_y: &[u8]) -> Result<Vec<u8>, &'static str> {
-    let x = FieldBytes::from(coord_array(pub_key_x)?);
-    let y = FieldBytes::from(coord_array(pub_key_y)?);
-    Ok(EncodedPoint::from_affine_coordinates(&x, &y, true)
-        .as_bytes()
-        .to_vec())
-}
-
-fn compute_recovery_id(
-    digest: &[u8],
-    signature: &[u8],
-    pub_key_x: &[u8],
-    pub_key_y: &[u8],
-) -> Result<u8, &'static str> {
-    let sig = Signature::from_slice(signature).map_err(|_| "invalid signature")?;
-    let x = FieldBytes::from(coord_array(pub_key_x)?);
-    let y = FieldBytes::from(coord_array(pub_key_y)?);
-    let point = EncodedPoint::from_affine_coordinates(&x, &y, false);
-    let expected_vk =
-        VerifyingKey::from_encoded_point(&point).map_err(|_| "invalid verifying key")?;
-
-    for id_val in 0u8..=1 {
-        let rid = RecoveryId::try_from(id_val).map_err(|_| "invalid recovery id")?;
-        if let Ok(recovered_vk) = VerifyingKey::recover_from_prehash(digest, &sig, rid)
-            && recovered_vk == expected_vk
-        {
-            return Ok(id_val);
-        }
-    }
-    Err("could not determine recovery ID")
-}
-
-fn build_ecdsa_input(compressed_pk: &[u8], digest: &[u8], signature_with_recovery: &[u8]) -> Input {
-    let mut stdin = Vec::new();
-    pack_le_words(&mut stdin, compressed_pk);
-    pack_le_words(&mut stdin, digest);
-    pack_le_words(&mut stdin, signature_with_recovery);
-    Input::new().with_stdin(stdin)
-}
-
-// Pack bytes as u32 LE values into u64 LE advice tape format, padded to word boundaries.
-fn pack_le_words(stdin: &mut Vec<u8>, data: &[u8]) {
-    let mut words: Vec<u32> = data
-        .chunks(4)
-        .map(|chunk| {
-            let mut bytes = [0u8; 4];
-            bytes[..chunk.len()].copy_from_slice(chunk);
-            u32::from_le_bytes(bytes)
-        })
-        .collect();
-
-    let words_needed = words.len().div_ceil(4) * 4;
-    words.resize(words_needed, 0);
-
-    for &w in &words {
-        stdin.extend_from_slice(&(w as u64).to_le_bytes());
-    }
-}
-
-/// Slice into array
-fn coord_array(bytes: &[u8]) -> Result<[u8; 32], &'static str> {
-    bytes.try_into().map_err(|_| "coordinate must be 32 bytes")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use ere_zkvm_interface::zkVM;
-
-    #[test]
-    fn compressed_key_is_valid_sec1() {
-        let (_digest, (pub_key_x, pub_key_y), _signature) = utils::generate_ecdsa_k256_input();
-        let compressed_pk = compress_public_key(&pub_key_x, &pub_key_y).unwrap();
-
-        assert_eq!(compressed_pk.len(), 33);
-        assert!(
-            compressed_pk[0] == 0x02 || compressed_pk[0] == 0x03,
-            "invalid prefix: 0x{:02x}",
-            compressed_pk[0]
-        );
-
-        k256::PublicKey::from_sec1_bytes(&compressed_pk).expect("not valid SEC1");
-    }
 
     #[test]
     fn miden_ecdsa_guest_executes() {
@@ -348,8 +317,41 @@ mod tests {
             .execute(prepared.input())
             .expect("ecdsa guest execution must succeed");
 
-        let result = u64::from_le_bytes(public_values[..8].try_into().unwrap());
-        assert_eq!(result, 1, "ECDSA verification should return 1");
+        check_ecdsa_public_values(&prepared, &public_values).expect("public statement must match");
+    }
+
+    #[test]
+    fn miden_ecdsa_proof_binds_public_statement() {
+        use utils::zkvm::{ECDSA_BENCH, compile_guest_program, guest_dir};
+
+        let program =
+            compile_guest_program(&MidenAsm, &guest_dir(ECDSA_BENCH)).expect("compile ecdsa guest");
+        let prepared = prepare_ecdsa(32, &program).expect("prepare ECDSA");
+        let proof = prove_ecdsa(&prepared, &program);
+        verify_ecdsa(&prepared, &proof, &(&program)).expect("complete ECDSA proof");
+
+        let (key_x, key_y) = prepared.expected_public_key().unwrap();
+        let mut wrong_message = prepared.expected_message().unwrap().to_vec();
+        wrong_message[0] ^= 1;
+        let other_statement = PreparedEcdsa::with_expected_values(
+            EreMiden::new(program.program.clone(), ProverResource::Cpu).unwrap(),
+            prepared.input().clone(),
+            program.byte_size,
+            (key_x.clone(), key_y.clone()),
+            wrong_message,
+        );
+        assert!(verify_ecdsa(&other_statement, &proof, &(&program)).is_err());
+
+        let mut wrong_key = key_x.clone();
+        wrong_key[0] ^= 1;
+        let other_statement = PreparedEcdsa::with_expected_values(
+            EreMiden::new(program.program.clone(), ProverResource::Cpu).unwrap(),
+            prepared.input().clone(),
+            program.byte_size,
+            (wrong_key, key_y.clone()),
+            prepared.expected_message().unwrap().to_vec(),
+        );
+        assert!(verify_ecdsa(&other_statement, &proof, &(&program)).is_err());
     }
 
     #[test]

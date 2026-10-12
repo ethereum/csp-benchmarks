@@ -12,7 +12,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  EXCLUDED_CRATES: "binius64 provekit-groth16 cairo-m stark-v"
+  EXCLUDED_CRATES: "binius64 miden provekit-groth16 cairo-m stark-v"
   GITHUB_TOKEN: ${{ secrets.GH_PAT || github.token }}
 
 # ────────────────── 1. Warm‑up build ──────────────────
@@ -33,6 +33,7 @@ jobs:
             ~/.rustup
             target
             binius64/target
+            miden/target
             cairo-m/target
             rookie-numbers/target
             stark-v/target
@@ -62,6 +63,9 @@ jobs:
           toolchain: nightly-2025-04-06
           profile: minimal
           components: llvm-tools, rustc-dev, rust-src, rustfmt, clippy
+
+      - name: Install Stark-V toolchain
+        run: rustup toolchain install nightly-2026-01-29 --profile minimal --component rustfmt --component clippy --target riscv32im-unknown-none-elf
 
       - name: Install OpenMPI
         uses: ./.github/actions/install-ompi

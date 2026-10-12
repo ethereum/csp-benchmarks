@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ere-platform-jolt = { git = "https://github.com/eth-act/ere", rev = "6573843", default-features = false }
-jolt-inlines-sha2 = { git = "https://github.com/a16z/jolt", rev = "2e05fe88" }
+ere-platform-jolt = { git = "https://github.com/Client-Side-Proving/ere", rev = "c9527535fb7976aee30727c3d3bd87a792c423d1", default-features = false }
+jolt-inlines-sha2 = { git = "https://github.com/a16z/jolt", rev = "2a85f76476daee22dea4234a5fa10c4c89e732be" }
 
 [features]
 guest = []

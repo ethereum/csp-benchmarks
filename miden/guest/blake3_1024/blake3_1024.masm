@@ -726,7 +726,7 @@ proc consume_advice_block
 
     # Advice supplies m15 first and m0 last, leaving [m0..m15] on top.
     repeat.16
-        adv_push.1
+        adv_push
         u32assert
     end
 

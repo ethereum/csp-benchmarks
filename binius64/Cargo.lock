@@ -1242,7 +1242,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 [[package]]
 name = "ere-zkvm-interface"
 version = "0.3.0"
-source = "git+https://github.com/eth-act/ere?rev=6573843#65738437e805d6001eeca94b2f40464e41759f64"
+source = "git+https://github.com/Client-Side-Proving/ere?rev=c9527535fb7976aee30727c3d3bd87a792c423d1#c9527535fb7976aee30727c3d3bd87a792c423d1"
 dependencies = [
  "anyhow",
  "auto_impl",

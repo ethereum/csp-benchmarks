@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 blake3 = { version = "1.8", default-features = false }
-guest-bin = { git = "https://github.com/ClementWalter/stark-v", rev = "0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1" }
-guest-lib = { git = "https://github.com/ClementWalter/stark-v", rev = "0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1" }
+guest-bin = { git = "https://github.com/ClementWalter/stark-v", rev = "d478f783055aa0d73a93768a433a3c6c31c91d1c" }
+guest-lib = { git = "https://github.com/ClementWalter/stark-v", rev = "d478f783055aa0d73a93768a433a3c6c31c91d1c" }
 
 [workspace]

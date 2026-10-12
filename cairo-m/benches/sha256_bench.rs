@@ -1,7 +1,6 @@
-use cairo_m::{compile_program, prepare, program_size, prove, verify};
-use cairo_m_common::{InputValue, Program};
-use cairo_m_prover::{adapter::import_from_runner_output, public_data::PublicData};
-use cairo_m_runner::run_cairo_program;
+use cairo_m::{PreparedBench, compile_program, prepare, program_size, prove, prover_input, verify};
+use cairo_m_common::Program;
+use cairo_m_prover::public_data::PublicData;
 use utils::harness::{AuditStatus, BenchProperties, ProvingSystem};
 
 utils::define_benchmark_harness!(
@@ -27,35 +26,12 @@ utils::define_benchmark_harness!(
     { compile_program() },
     |input_size, program: &Program| { prepare(input_size, program) },
     |_, _| 0,
-    |(program, (entrypoint_name, runner_inputs)), _| {
-        prove(program, (entrypoint_name, runner_inputs))
-    },
-    |_, proof, _| { verify(proof) },
-    |(compiled_program, _), _| { program_size(compiled_program) },
+    |prepared, _| { prove(prepared) },
+    |prepared, proof, _| { verify(prepared, proof) },
+    |prepared: &PreparedBench, _| { program_size(&prepared.program) },
     |proof, _| proof.stark_proof.size_estimate(),
-    |(program, (entrypoint_name, runner_inputs)): &(Program, (String, Vec<InputValue>))| {
-        // Run/Execute the program
-        let runner_output = run_cairo_program(
-            program,
-            entrypoint_name.as_str(),
-            runner_inputs.as_slice(),
-            Default::default(),
-        )
-        .expect("failed to run cairo program");
-
-        // Proof Generation
-        let segment = runner_output
-            .vm
-            .segments
-            .clone()
-            .into_iter()
-            .next()
-            .unwrap();
-
-        let prover_input =
-            import_from_runner_output(segment, runner_output.public_address_ranges.clone())
-                .expect("Failed to import runner output for proof generation");
-
+    |prepared: &PreparedBench| {
+        let prover_input = prover_input(prepared);
         PublicData::new(&prover_input).clock.0 as u64
     }
 );

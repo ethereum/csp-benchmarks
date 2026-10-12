@@ -21,7 +21,7 @@ use miden::core::sys
 #!     (Eight 32-bit words of the SHA-256 digest, big-endian per word.)
 begin
     # Read message length (bytes) from advice, keep a copy in mem[1]
-    adv_push.1
+    adv_push
     u32assert
     dup
     mem_store.1                    # mem[1] = len
@@ -38,10 +38,10 @@ begin
     # For each 16B block: read 4×u32 (BE) from advice and store to memory
     mem_load.2 u32assert neq.0
     while.true
-        adv_push.1 u32assert       # w3
-        adv_push.1 u32assert       # w2
-        adv_push.1 u32assert       # w1
-        adv_push.1 u32assert       # w0
+        adv_push u32assert       # w3
+        adv_push u32assert       # w2
+        adv_push u32assert       # w1
+        adv_push u32assert       # w0
         mem_load.0 mem_storew_be dropw
 
         # Advance write pointer; decrement remaining block count

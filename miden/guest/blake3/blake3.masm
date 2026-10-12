@@ -890,7 +890,7 @@ proc consume_advice_block
 
     # Advice supplies m15 first and m0 last, leaving [m0..m15] on top.
     repeat.16
-        adv_push.1
+        adv_push
         u32assert
     end
 
@@ -997,7 +997,7 @@ begin
     # value. The benchmark compiles generated blake3_<size>.masm programs whose
     # entrypoints hard-code the schedule and receive message words only.
     # Shared harness sizes are full 64-byte blocks from 128 through 2048 bytes.
-    adv_push.1
+    adv_push
     u32assert
     dup
     mem_store.0

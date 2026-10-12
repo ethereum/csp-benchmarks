@@ -1,42 +1,153 @@
-use miden::core::crypto::dsa::ecdsa_k256_keccak
+use miden::core::crypto::hashes::poseidon2
+use miden::core::precompiles::curves::secp256k1
+use miden::core::precompiles::fields::k1_base
+use miden::core::precompiles::fields::k1_scalar
+use miden::core::word
 use miden::core::sys
 
-#! ECDSA secp256k1-keccak signature verification.
-#! Reads compressed PK, digest, and signature+recovery from the advice tape,
-#! stores them in memory, then calls verify_prehash.
-#!
-#! Memory layout:
-#!   10000..10008: compressed public key (3 words)
-#!   10100..10104: message digest (2 words)
-#!   10200..10216: signature + recovery ID (5 words)
+# ECDSA over a supplied 32-byte prehash, using Miden's scalar and curve precompiles.
+# The helper procedures follow Miden VM v0.34.0's ecdsa_k256_keccak module:
+# https://github.com/0xMiden/miden-vm/blob/v0.34.0/crates/lib/core/asm/crypto/dsa/ecdsa_k256_keccak.masm
+# Advice: digest[8], public_key_x[8], public_key_y[8], r[8], s[8], as little-endian u32 limbs.
+# Output: Poseidon2(public_key_x || public_key_y)[4], digest[8], then four zero felts.
+# Signature scalars remain private. Proving includes the complete precompile proof.
+
+type PublicKey = struct { x: k1_base::Value, y: k1_base::Value }
+type Prehash = struct { limbs: [u32; 8] }
+
+proc verify_digest_impl(prehash: Prehash, public_key_ptr: ptr<PublicKey>)
+    exec.prepare_verify_inputs
+    # => [U1, Q, U2, SIG_R, ...]
+    exec.secp256k1::push_generator
+    # => [G, U1, Q, U2, SIG_R, ...]
+    exec.secp256k1::msm2
+    # => [VERIFY_POINT, SIG_R, ...]
+    exec.assert_x_eq_scalar_k1
+    # => [...]
+end
+
+proc prepare_verify_inputs(
+    prehash: Prehash,
+    public_key_ptr: ptr<PublicKey>,
+) -> (k1_scalar::Expr, secp256k1::Point, k1_scalar::Expr, k1_scalar::Expr)
+    exec.k1_scalar::load_reduced_256
+    # => [Z, pubkey_ptr, ...]
+
+    movup.4
+    # => [pubkey_ptr, Z, ...]
+    exec.secp256k1::load_mem
+    # => [Q, Z, ...]
+    swapw
+    # => [Z, Q, ...]
+
+    exec.load_signature_k1
+    # => [SIG_S, SIG_R, Z, Q, ...]
+
+    exec.compute_ecdsa_scalars
+    # => [U1, Q, U2, SIG_R, ...]
+end
+
+proc load_signature_k1() -> (k1_scalar::Expr, k1_scalar::Expr)
+    exec.load_scalar_k1_from_advice
+    # => [SIG_R, ...]
+
+    exec.load_scalar_k1_from_advice
+    # => [SIG_S, SIG_R, ...]
+end
+
+proc load_scalar_k1_from_advice() -> k1_scalar::Expr
+    adv_pushw
+    # => [VALUE_LO_U32[4], ...]
+    adv_pushw
+    # => [VALUE_HI_U32[4], VALUE_LO_U32[4], ...]
+    swapw
+    # => [VALUE_LO_U32[4], VALUE_HI_U32[4], ...]
+    exec.k1_scalar::load
+    # => [VALUE_SCALAR_DIGEST, ...]
+end
+
+proc compute_ecdsa_scalars(
+    s: k1_scalar::Expr,
+    r: k1_scalar::Expr,
+    z: k1_scalar::Expr,
+    q: secp256k1::Point,
+) -> (k1_scalar::Expr, secp256k1::Point, k1_scalar::Expr, k1_scalar::Expr)
+    # Inversion rejects s = 0; check r explicitly.
+    dupw.1
+    exec.k1_scalar::push_zero_digest
+    exec.word::eq
+    assertz.err="invalid ECDSA signature: r is zero"
+    # => [SIG_S, SIG_R, Z, Q, ...]
+
+    exec.k1_scalar::inv
+    # => [S_INV, SIG_R, Z, Q, ...]
+
+    dupw
+    movupw.3
+    exec.k1_scalar::mul
+    # => [U1 = Z*S_INV, S_INV, SIG_R, Q, ...]
+
+    dupw.1
+    dupw.3
+    exec.k1_scalar::mul
+    # => [U2 = SIG_R*S_INV, U1, S_INV, SIG_R, Q, ...]
+
+    swapw.2
+    # => [S_INV, U1, U2, SIG_R, Q, ...]
+    dropw
+    # => [U1, U2, SIG_R, Q, ...]
+
+    movupw.3 swapw
+    # => [U1, Q, U2, SIG_R, ...]
+end
+
+proc assert_x_eq_scalar_k1(point: secp256k1::Point, r: k1_scalar::Expr)
+    exec.secp256k1::eval
+    # => [VERIFY_POINT_VALUE_DIGEST, X_OR_TRUE_DIGEST, Y_OR_TRUE_DIGEST, SIG_R_SCALAR_VALUE_DIGEST, ...]
+
+    # Reject identity at the curve VALUE-digest level. `eval` returns the canonical VALUE digest
+    # alongside the coordinate payload, so direct comparison to the registered identity VALUE digest
+    # is sound and avoids a second curve evaluation.
+    exec.secp256k1::push_identity
+    # => [IDENTITY_VALUE_DIGEST, VERIFY_POINT_VALUE_DIGEST, X_OR_TRUE_DIGEST, Y_OR_TRUE_DIGEST, SIG_R_SCALAR_VALUE_DIGEST, ...]
+    exec.word::eq
+    # => [is_identity, X_OR_TRUE_DIGEST, Y_OR_TRUE_DIGEST, SIG_R_SCALAR_VALUE_DIGEST, ...]
+    assertz.err="invalid ECDSA verification point: identity"
+    # => [X_DIGEST, Y_DIGEST, SIG_R_SCALAR_VALUE_DIGEST, ...]
+    swapw dropw
+    # => [X_DIGEST, SIG_R_SCALAR_VALUE_DIGEST, ...]
+
+    # X_DIGEST is a canonical k1-base VALUE child of the proof-bound curve VALUE above. Open that
+    # commitment directly; ordinary `eval` remains necessary for arbitrary expression digests.
+    exec.k1_base::open_value
+    # => [X_U32[8], SIG_R_SCALAR_VALUE_DIGEST, ...]
+    exec.k1_scalar::load_reduced_256
+    # => [X_SCALAR_DIGEST, SIG_R_SCALAR_VALUE_DIGEST, ...]
+
+    # Deferred registration evaluates this same-domain scalar equality eagerly, so a mismatch traps
+    # during main-VM execution as well as being committed to the deferred root.
+    exec.k1_scalar::assert_eq
+    # => [...]
+end
+
 begin
-    # Compressed public key (3 words at 10000, 10004, 10008)
-    adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert
-    push.10000 mem_storew_be dropw
-    adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert
-    push.10004 mem_storew_be dropw
-    adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert
-    push.10008 mem_storew_be dropw
+    adv_pushw u32assertw mem_storew_le.10100 dropw
+    adv_pushw u32assertw mem_storew_le.10104 dropw
 
-    # Message digest (2 words at 10100, 10104)
-    adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert
-    push.10100 mem_storew_be dropw
-    adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert
-    push.10104 mem_storew_be dropw
+    # Store the public key and compute its public commitment from the same limbs.
+    push.10000 padw padw padw
+    adv_pipe hperm adv_pipe hperm
+    exec.poseidon2::squeeze_digest
+    movup.4 drop
+    mem_storew_le.11000 dropw
 
-    # Signature + recovery ID (5 words at 10200..10216)
-    adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert
-    push.10200 mem_storew_be dropw
-    adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert
-    push.10204 mem_storew_be dropw
-    adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert
-    push.10208 mem_storew_be dropw
-    adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert
-    push.10212 mem_storew_be dropw
-    adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert  adv_push.1 u32assert
-    push.10216 mem_storew_be dropw
+    push.10000
+    padw mem_loadw_le.10104
+    padw mem_loadw_le.10100
+    exec.verify_digest_impl
 
-    push.10200 push.10100 push.10000
-    exec.ecdsa_k256_keccak::verify_prehash
+    padw mem_loadw_le.10104
+    padw mem_loadw_le.10100
+    padw mem_loadw_le.11000
     exec.sys::truncate_stack
 end

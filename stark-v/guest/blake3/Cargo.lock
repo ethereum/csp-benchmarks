@@ -247,7 +247,7 @@ dependencies = [
 [[package]]
 name = "guest-bin"
 version = "0.1.0"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
  "guest-lib",
  "postcard",
@@ -257,7 +257,7 @@ dependencies = [
 [[package]]
 name = "guest-lib"
 version = "0.1.0"
-source = "git+https://github.com/ClementWalter/stark-v?rev=0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1#0bf633bc5a87b14d2e2ad4d8f30be2701849e0c1"
+source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
  "k256",
  "postcard",

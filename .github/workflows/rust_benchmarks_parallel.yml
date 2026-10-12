@@ -114,9 +114,13 @@ jobs:
 
           # ─── 3. filter by diff & [[bench]] ──────────────────────────────
           changed=()       # declare early
+          SHARED_CHANGED=false
+          if git diff --name-only "$BASE_REF"..HEAD 2>/dev/null | grep -qE '^(Cargo\.(toml|lock)|utils/)'; then
+            SHARED_CHANGED=true
+          fi
           for d in "${selected[@]}"; do
             # When RUN_ALL=true we ignore the diff check, otherwise we require a diff.
-            if [[ "$RUN_ALL" != "true" ]]; then
+            if [[ "$RUN_ALL" != "true" && "$SHARED_CHANGED" != "true" ]]; then
               git diff --name-only "$BASE_REF"..HEAD 2>/dev/null | grep -q "^${d}/" || continue
             fi
 
@@ -151,6 +155,7 @@ jobs:
             ~/.rustup
             target
             binius64/target
+            miden/target
             cairo-m/target
             rookie-numbers/target
             stark-v/target
@@ -167,7 +172,7 @@ jobs:
           default: true
           components: llvm-tools, rustc-dev, rustfmt, clippy
 
-      - name: Install Binius toolchain
+      - name: Install Rust 1.98.1
         uses: actions-rs/toolchain@v1
         with:
           toolchain: 1.98.1
@@ -186,6 +191,9 @@ jobs:
         with:
           toolchain: nightly-2025-07-14
           profile: minimal
+
+      - name: Install Stark-V toolchain
+        run: rustup toolchain install nightly-2026-01-29 --profile minimal --component rustfmt --component clippy --target riscv32im-unknown-none-elf
 
       - name: Install OpenMPI for polyhedra-expander
         uses: ./.github/actions/install-ompi
@@ -233,6 +241,9 @@ jobs:
           fi
           if echo "$CRATES" | grep -q '"provekit-groth16"'; then
             cd provekit-groth16 && cargo build --release && cd ..
+          fi
+          if echo "$CRATES" | grep -q '"miden"'; then
+            cd miden && cargo build --release && cd ..
           fi
           if echo "$CRATES" | grep -q '"cairo-m"'; then
             cd cairo-m && cargo build --release && cd ..
@@ -302,6 +313,7 @@ jobs:
             ~/.cargo/git
             target
             binius64/target
+            miden/target
             cairo-m/target
             rookie-numbers/target
             stark-v/target
@@ -318,8 +330,8 @@ jobs:
           default: true
           components: llvm-tools, rustc-dev
 
-      - name: Install Binius toolchain
-        if: ${{ contains(matrix.crate, 'binius64') }}
+      - name: Install Rust 1.98.1
+        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'miden') }}
         uses: actions-rs/toolchain@v1
         with:
           toolchain: 1.98.1
@@ -363,10 +375,14 @@ jobs:
         if: ${{ contains(matrix.crate, 'cairo-m') }}
         uses: ./.github/actions/install-llvm
 
+      - name: Install Stark-V toolchain
+        if: ${{ contains(matrix.crate, 'stark-v') }}
+        run: rustup toolchain install nightly-2026-01-29 --profile minimal --component rustfmt --component clippy --target riscv32im-unknown-none-elf
+
       - name: Install RISC-V target for stark-v
         if: ${{ contains(matrix.crate, 'stark-v') }}
         run: |
-          rustup target add riscv32im-unknown-none-elf
+          rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-01-29
 
       - name: Install circom
         if: ${{ contains(matrix.crate, 'circom') }}
@@ -397,11 +413,14 @@ jobs:
           fi
 
       - name: Build and copy excluded memory benchmark binary to workspace target
-        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') || contains(matrix.crate, 'stark-v') }}
+        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'miden') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') || contains(matrix.crate, 'stark-v') }}
         run: |
           mkdir -p target/release
           if [ "${{ matrix.crate }}" = "binius64" ]; then
             cd binius64 && RUSTFLAGS="-C target-cpu=native" cargo build --release --bin sha256_mem_binius64 --bin keccak_mem_binius64 --bin blake3_mem_binius64 && cd ..
+          elif [ "${{ matrix.crate }}" = "miden" ]; then
+            cd miden && cargo build --release --bin sha256_mem_miden --bin blake3_mem_miden --bin ecdsa_mem_miden && cd ..
+            cp miden/target/release/sha256_mem_miden miden/target/release/blake3_mem_miden miden/target/release/ecdsa_mem_miden target/release/
           elif [ "${{ matrix.crate }}" = "cairo-m" ]; then
             cd cairo-m && cargo build --release --bin sha256_mem_cairo_m && cd ..
             cp cairo-m/target/release/sha256_mem_cairo_m target/release/
@@ -437,7 +456,7 @@ jobs:
           fi
 
       - name: Copy excluded crates criterion results to workspace target
-        if: ${{ contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') || contains(matrix.crate, 'stark-v') }}
+        if: ${{ contains(matrix.crate, 'miden') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') || contains(matrix.crate, 'stark-v') }}
         run: |
           mkdir -p target/criterion
           cp -r ${{ matrix.crate }}/target/criterion/* target/criterion/
