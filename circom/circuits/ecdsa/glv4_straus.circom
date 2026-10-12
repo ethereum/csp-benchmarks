@@ -22,8 +22,7 @@
     64-bit scalars instead of two 128-bit ones, so half the loop, at the price
     of a 16-entry table instead of 4.
 
-    The table is offset by a sentinel D, so no entry and no intermediate
-    accumulator is ever the point at infinity:
+    The table is offset by a sentinel D:
 
         T[d] = D + d0*A0 + d1*A1 + d2*A2 + d3*A3,   d = sum d_i * 2^i
 
@@ -31,10 +30,23 @@
     Since that sum must be O, the accumulator has to equal the constant point
     C = (2^nbits - 1)*D, so the terminal assertion is a plain equality against
     a constant. (rot256: "closed by an =O assertion".)
+
+    D is public with a known discrete logarithm, so inputs can be chosen to
+    make a table entry or an intermediate accumulator equal to O, or to make
+    an addition a doubling. The table and the accumulator therefore use
+    complete group operations with an explicit infinity flag; an entry or an
+    accumulator may be O and later become finite again. Only the final
+    accumulator is required to be finite.
+
+    The bases must be valid canonical finite points: the equality selectors
+    of the complete addition compare limbs.
+
+    Points are eight 32-bit limbs per coordinate. The constants below are
+    kept in 64-bit limbs and split at compile time.
 */
 pragma circom 2.0.2;
 
-include "./secp256k1.circom";
+include "./secp256k1_complete.circom";
 include "../../circomlib/circuits/mux4.circom";
 
 // D = [12345678901234567890]G, the table sentinel.
@@ -81,46 +93,6 @@ function get_glv4_target_y() {
     return ret;
 }
 
-/*
-    Secp256k1AddUnequal with its precondition checked rather than assumed.
-
-    The circom-ecdsa component is named "unequal" but constrains nothing to
-    that effect: when the operands coincide, the cubic constraint and
-    Secp256k1PointOnLine both become 0 == 0 and the output is left free. In
-    the loop below that is a forgery, not incompleteness -- the adversary
-    solves a linear equation mod n to drive one step into that state and then
-    walks the accumulator to C. The sentinel does not prevent it, since Q and S
-    are adversarial and can carry a component along D.
-
-    Distinct x is enough to pin the slope down. An honest prover hitting equal
-    x would be rejected, with probability ~2^-250 over the circuit.
-*/
-template Secp256k1AddStrict() {
-    signal input a[2][4];
-    signal input b[2][4];
-    signal output out[2][4];
-
-    component same = BigIsEqual(4);
-    for (var j = 0; j < 4; j++) {
-        same.in[0][j] <== a[0][j];
-        same.in[1][j] <== b[0][j];
-    }
-    same.out === 0;
-
-    component add = Secp256k1AddUnequal(64, 4);
-    for (var c = 0; c < 2; c++) {
-        for (var j = 0; j < 4; j++) {
-            add.a[c][j] <== a[c][j];
-            add.b[c][j] <== b[c][j];
-        }
-    }
-    for (var c = 0; c < 2; c++) {
-        for (var j = 0; j < 4; j++) {
-            out[c][j] <== add.out[c][j];
-        }
-    }
-}
-
 // bits[i][j] = bit j of scalar i (little-endian). A[i] = base i, with the sign
 // already folded into the point. No output: closes on the assertion acc == C.
 template GLV4StrausLoop(nbits) {
@@ -129,29 +101,33 @@ template GLV4StrausLoop(nbits) {
     assert(nbits == 64);
 
     signal input bits[4][nbits];
-    signal input A[4][2][4];
+    signal input A[4][2][8];
 
-    var Dx[4] = get_glv4_sentinel_x();
-    var Dy[4] = get_glv4_sentinel_y();
+    var Dx[100] = p256_split64to32(get_glv4_sentinel_x());
+    var Dy[100] = p256_split64to32(get_glv4_sentinel_y());
 
     // ---------- the bases have to be canonical ----------
-    // The guards compare limbs, so representations must be unique. Two bases
-    // come out of BigMultModP already canonical, but this template should not
-    // depend on what the caller does.
-    component baseRange[4];
+    // The equality selectors compare limbs, so representations must be
+    // unique. The ECDSA caller supplies canonical coordinates, but this
+    // template should not depend on what the caller does.
+    component baseRange[4][2];
     for (var b = 0; b < 4; b++) {
-        baseRange[b] = CheckInRangeSecp256k1();
-        for (var j = 0; j < 4; j++) baseRange[b].in[j] <== A[b][0][j];
+        for (var c = 0; c < 2; c++) {
+            baseRange[b][c] = CheckInRangeSecp256k1Limbs32();
+            for (var j = 0; j < 8; j++) baseRange[b][c].in[j] <== A[b][c][j];
+        }
     }
 
     // ---------- the table: 16 entries, 15 additions ----------
     // T[d] = T[d without its lowest set bit] + A[index of that bit], so every
     // new entry costs exactly one addition.
-    signal T[16][2][4];
-    for (var j = 0; j < 4; j++) {
+    signal T[16][2][8];
+    signal TInf[16];
+    for (var j = 0; j < 8; j++) {
         T[0][0][j] <== Dx[j];
         T[0][1][j] <== Dy[j];
     }
+    TInf[0] <== 0;
 
     component tab[16];
     for (var d = 1; d < 16; d++) {
@@ -164,34 +140,42 @@ template GLV4StrausLoop(nbits) {
         }
         var prev = d - pow;
 
-        tab[d] = Secp256k1AddStrict();
+        tab[d] = Secp256k1AddComplete();
+        tab[d].aInf <== TInf[prev];
+        tab[d].bInf <== 0;
         for (var c = 0; c < 2; c++) {
-            for (var j = 0; j < 4; j++) {
+            for (var j = 0; j < 8; j++) {
                 tab[d].a[c][j] <== T[prev][c][j];
                 tab[d].b[c][j] <== A[lowidx][c][j];
             }
         }
         for (var c = 0; c < 2; c++) {
-            for (var j = 0; j < 4; j++) {
+            for (var j = 0; j < 8; j++) {
                 T[d][c][j] <== tab[d].out[c][j];
             }
         }
+        TInf[d] <== tab[d].outInf;
     }
 
-    // ---------- the loop: nbits steps, one double + one add each ----------
+    // ---------- the loop: nbits steps, one 2*acc + T[d] each ----------
+    // The selector also carries the infinity flag of the entry. The bits are
+    // Boolean, so the selected entry is exactly one table row. The
+    // accumulator has a canonical x and a y in 32-bit limbs; see
+    // Secp256k1DoubleAddComplete.
     component sel[nbits];
-    component dbl[nbits - 1];
-    component adder[nbits - 1];
-    signal acc[nbits][2][4];
+    component step[nbits - 1];
+    signal acc[nbits][2][8];
+    signal accInf[nbits];
 
     for (var i = nbits - 1; i >= 0; i--) {
-        sel[i] = MultiMux4(8);
+        sel[i] = MultiMux4(17);
         for (var d = 0; d < 16; d++) {
             for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 4; j++) {
-                    sel[i].c[c * 4 + j][d] <== T[d][c][j];
+                for (var j = 0; j < 8; j++) {
+                    sel[i].c[c * 8 + j][d] <== T[d][c][j];
                 }
             }
+            sel[i].c[16][d] <== TInf[d];
         }
         for (var b = 0; b < 4; b++) {
             sel[i].s[b] <== bits[b][i];
@@ -199,37 +183,37 @@ template GLV4StrausLoop(nbits) {
 
         if (i == nbits - 1) {
             for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 4; j++) {
-                    acc[i][c][j] <== sel[i].out[c * 4 + j];
+                for (var j = 0; j < 8; j++) {
+                    acc[i][c][j] <== sel[i].out[c * 8 + j];
                 }
             }
+            accInf[i] <== sel[i].out[16];
         } else {
-            dbl[i] = Secp256k1Double(64, 4);
-            adder[i] = Secp256k1AddStrict();
-
+            step[i] = Secp256k1DoubleAddComplete();
+            step[i].aInf <== accInf[i + 1];
+            step[i].bInf <== sel[i].out[16];
             for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 4; j++) {
-                    dbl[i].in[c][j] <== acc[i + 1][c][j];
+                for (var j = 0; j < 8; j++) {
+                    step[i].a[c][j] <== acc[i + 1][c][j];
+                    step[i].b[c][j] <== sel[i].out[c * 8 + j];
                 }
             }
             for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 4; j++) {
-                    adder[i].a[c][j] <== dbl[i].out[c][j];
-                    adder[i].b[c][j] <== sel[i].out[c * 4 + j];
+                for (var j = 0; j < 8; j++) {
+                    acc[i][c][j] <== step[i].out[c][j];
                 }
             }
-            for (var c = 0; c < 2; c++) {
-                for (var j = 0; j < 4; j++) {
-                    acc[i][c][j] <== adder[i].out[c][j];
-                }
-            }
+            accInf[i] <== step[i].outInf;
         }
     }
 
     // ---------- terminal assertion: acc == (2^nbits - 1)*D ----------
-    var Cx[4] = get_glv4_target_x();
-    var Cy[4] = get_glv4_target_y();
-    for (var j = 0; j < 4; j++) {
+    // C is finite, so the final accumulator must be finite as well. The
+    // canonical target fixes both coordinates, including the y limbs.
+    var Cx[100] = p256_split64to32(get_glv4_target_x());
+    var Cy[100] = p256_split64to32(get_glv4_target_y());
+    accInf[0] === 0;
+    for (var j = 0; j < 8; j++) {
         acc[0][0][j] === Cx[j];
         acc[0][1][j] === Cy[j];
     }
