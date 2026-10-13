@@ -44,7 +44,7 @@ node circom/tests/hash-circuits.cjs "$artifacts/bitwise"
 
 The tests compare three message patterns, reject incorrect digests and invalid bytes, and check that forged output witnesses fail the R1CS. The bitwise tests cover all eight Boolean input combinations and check output uniqueness.
 
-Generate each Groth16 zkey from the corresponding `.r1cs` and copy its generated `.cpp` and `.dat` together. The largest circuit requires a prepared setup file with at least 2^21 points, available from [PSE's Powers of Tau ceremony](https://github.com/privacy-ethereum/perpetualpowersoftau#prepared-phase-2-files). The hash and ECDSA zkeys and `checksums.sha256` must be published together in the release selected by CI.
+Generate each Groth16 zkey from the corresponding `.r1cs` and copy its generated `.cpp` and `.dat` together. The largest circuit requires a prepared setup file with at least 2^21 points, available from [PSE's Powers of Tau ceremony](https://github.com/privacy-ethereum/perpetualpowersoftau#prepared-phase-2-files). Publish the zkeys listed in the repository's `circom/checksums.sha256` in the release selected by CI.
 
 For the 2,048-byte Keccak setup, run SnarkJS with `NODE_OPTIONS=--max-old-space-size=16384` to allow a 16 GiB JavaScript heap.
 
@@ -66,16 +66,16 @@ after a clean checkout spends about five minutes in circom before the C++ compil
 
 The secp256k1 circuit, `ecdsa_32`, uses complete group operations in its fake-GLV Straus table and accumulator, so doubling, inverse points, and infinity are handled rather than rejected. Circom 2.2.3 with `--O2` produces 279,647 nonlinear constraints and 20 public inputs. [secp256k1 validation](tests/SECP256K1.md) describes the caller preconditions and the focused R1CS regressions.
 
-The secp256r1 (P-256) ECDSA circuit, `ecdsa_p256_32`, is built the same way, so a clean build compiles both generators. Its complete group operations handle doubling, inverse points, and infinity throughout the Straus table and accumulator. Circom 2.2.3 with `--O2` produces 299,183 nonlinear constraints and 20 public inputs. Its benchmark needs the `circom-ecdsa-p256-bench` feature and a matching zkey. [P-256 validation](tests/P256.md) describes the group operations, soundness argument, and focused R1CS regressions.
+The secp256r1 (P-256) ECDSA circuit, `ecdsa_p256_32`, is built the same way, so a clean build compiles both generators. Its complete group operations handle doubling, inverse points, and infinity throughout the Straus table and accumulator. Circom 2.2.3 with `--O2` produces 299,183 nonlinear constraints and 20 public inputs. [P-256 validation](tests/P256.md) describes the group operations, soundness argument, and focused R1CS regressions.
 
 ## Run the benchmarks
 
-The default benchmarks include SHA-256, Keccak-256, Poseidon, and secp256k1 ECDSA.
+The default benchmarks include SHA-256, Keccak-256, Poseidon, secp256k1 ECDSA, and secp256r1 (P-256) ECDSA.
 
 From `circom/`, download the keys listed in the checksum manifest:
 
 ```bash
-release=https://github.com/privacy-ethereum/csp-benchmarks/releases/download/zkeys-v2
+release=https://github.com/ethereum/csp-benchmarks/releases/download/zkeys-v3
 while read -r checksum zkey; do
   mkdir -p "$(dirname "$zkey")"
   curl --fail --location --retry 3 "$release/$(basename "$zkey")" --output "$zkey"

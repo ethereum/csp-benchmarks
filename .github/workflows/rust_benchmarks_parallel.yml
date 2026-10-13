@@ -271,33 +271,16 @@ jobs:
       - name: Download and verify circom zkeys
         if: ${{ contains(matrix.crate, 'circom') }}
         env:
-          ZKEYS_RELEASE_URL: https://github.com/privacy-ethereum/csp-benchmarks/releases/download/zkeys-v2
+          ZKEYS_RELEASE_URL: https://github.com/ethereum/csp-benchmarks/releases/download/zkeys-v3
         run: |
           set -euo pipefail
-          while IFS= read -r zkey; do
+          while read -r checksum zkey; do
             [[ -n "$zkey" ]] || continue
             mkdir -p "circom/$(dirname "$zkey")"
             curl --fail --location --retry 3 --retry-all-errors \
               "$ZKEYS_RELEASE_URL/$(basename "$zkey")" \
               --output "circom/$zkey"
-          done <<'EOF'
-          circuits/ecdsa/ecdsa_32/ecdsa_32_0001.zkey
-          circuits/keccak/keccak_1024/keccak_1024_0001.zkey
-          circuits/keccak/keccak_128/keccak_128_0001.zkey
-          circuits/keccak/keccak_2048/keccak_2048_0001.zkey
-          circuits/keccak/keccak_256/keccak_256_0001.zkey
-          circuits/keccak/keccak_512/keccak_512_0001.zkey
-          circuits/poseidon/poseidon_12/poseidon_12_0001.zkey
-          circuits/poseidon/poseidon_16/poseidon_16_0001.zkey
-          circuits/poseidon/poseidon_2/poseidon_2_0001.zkey
-          circuits/poseidon/poseidon_4/poseidon_4_0001.zkey
-          circuits/poseidon/poseidon_8/poseidon_8_0001.zkey
-          circuits/sha256/sha256_1024/sha256_1024_0001.zkey
-          circuits/sha256/sha256_128/sha256_128_0001.zkey
-          circuits/sha256/sha256_2048/sha256_2048_0001.zkey
-          circuits/sha256/sha256_256/sha256_256_0001.zkey
-          circuits/sha256/sha256_512/sha256_512_0001.zkey
-          EOF
+          done < circom/checksums.sha256
 
           (cd circom && shasum -a 256 --check checksums.sha256)
 
