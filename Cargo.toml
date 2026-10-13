@@ -8,6 +8,7 @@ members = [
     "halo2",
     "jolt",
     "risc0",
+    "stark-v",
     "vega",
     "flock",
     "utils",
@@ -22,7 +23,6 @@ exclude = [
     "provekit-groth16",
     "cairo-m",
     "rookie-numbers",
-    "stark-v",
 ]
 
 [workspace.dependencies]
@@ -52,3 +52,7 @@ ark-ff = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist
 ark-ec = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
 ark-serialize = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
 ark-bn254 = { git = "https://github.com/a16z/arkworks-algebra", branch = "dev/twist-shout" }
+
+# Stark-V's SDK uses the shared interface from the CSP ERE fork.
+[patch."https://github.com/eth-act/ere"]
+ere-zkvm-interface = { git = "https://github.com/Client-Side-Proving/ere", rev = "c9527535fb7976aee30727c3d3bd87a792c423d1" }

@@ -12,7 +12,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  EXCLUDED_CRATES: "binius64 miden provekit-groth16 cairo-m stark-v"
+  EXCLUDED_CRATES: "binius64 miden provekit-groth16 cairo-m"
   GITHUB_TOKEN: ${{ secrets.GH_PAT || github.token }}
 
 # ────────────────── 1. Warm‑up build ──────────────────
@@ -36,7 +36,6 @@ jobs:
             miden/target
             cairo-m/target
             rookie-numbers/target
-            stark-v/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
@@ -64,8 +63,8 @@ jobs:
           profile: minimal
           components: llvm-tools, rustc-dev, rust-src, rustfmt, clippy
 
-      - name: Install Stark-V toolchain
-        run: rustup toolchain install nightly-2026-01-29 --profile minimal --component rustfmt --component clippy --target riscv32im-unknown-none-elf
+      - name: Install RISC-V target for Stark-V
+        run: rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-04
 
       - name: Install OpenMPI
         uses: ./.github/actions/install-ompi

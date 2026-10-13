@@ -27,6 +27,8 @@ See `README.MD` for project overview and `CONTRIBUTING.md` for the full contribu
 
 ### Quick commands
 
+Stark-V guest compilation uses the root `nightly-2026-03-04` toolchain and requires the RISC-V target. Install it with `rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-04`.
+
 ```bash
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features
@@ -35,7 +37,7 @@ BENCH_INPUT_PROFILE=reduced cargo bench -p <crate>
 
 ### Gotcha: excluded crates
 
-`binius64/`, `miden/`, `provekit-groth16/`, `cairo-m/`, `rookie-numbers/`, and `stark-v/` are excluded from the workspace. If you touch them, build/lint from inside each directory.
+`binius64/`, `miden/`, `provekit-groth16/`, `cairo-m/`, and `rookie-numbers/` are excluded from the workspace. If you touch them, build/lint from inside each directory.
 
 ## Non-Rust benchmarks
 
@@ -75,16 +77,15 @@ See `CONTRIBUTING.md` for comprehensive guidelines on adding benchmarks.
 Before reporting completion:
 
 1. Run `cargo build --workspace` successfully
-   - **Note**: Some crates (`binius64`, `miden`, `provekit-groth16`, `cairo-m`, `rookie-numbers`, `stark-v`) are excluded from the workspace. Build them separately:
+   - **Note**: Some crates (`binius64`, `miden`, `provekit-groth16`, `cairo-m`, `rookie-numbers`) are excluded from the workspace. Build them separately:
      ```bash
      cd binius64 && cargo build && cd ..
      cd miden && cargo build && cd ..
      cd provekit-groth16 && cargo build && cd ..
      cd cairo-m && cargo build && cd ..
      cd rookie-numbers && cargo build && cd ..
-     cd stark-v && cargo build && cd ..
      ```
 2. Run `cargo clippy --workspace --all-targets --all-features` with no errors
-   - For excluded crates: `cd binius64 && cargo clippy --all-targets --all-features && cd ..` (and same for `miden`, `provekit-groth16`, `cairo-m`, `rookie-numbers`, and `stark-v`)
+   - For excluded crates: `cd binius64 && cargo clippy --all-targets --all-features && cd ..` (and same for `miden`, `provekit-groth16`, `cairo-m`, and `rookie-numbers`)
 3. Run `cargo fmt --all -- --check`
 4. Test benchmark with `BENCH_INPUT_PROFILE=reduced`

@@ -158,7 +158,6 @@ jobs:
             miden/target
             cairo-m/target
             rookie-numbers/target
-            stark-v/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
@@ -192,8 +191,8 @@ jobs:
           toolchain: nightly-2025-07-14
           profile: minimal
 
-      - name: Install Stark-V toolchain
-        run: rustup toolchain install nightly-2026-01-29 --profile minimal --component rustfmt --component clippy --target riscv32im-unknown-none-elf
+      - name: Install RISC-V target for Stark-V
+        run: rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-04
 
       - name: Install OpenMPI for polyhedra-expander
         uses: ./.github/actions/install-ompi
@@ -250,9 +249,6 @@ jobs:
           fi
           if echo "$CRATES" | grep -q '"rookie-numbers"'; then
             cd rookie-numbers && cargo build --release && cd ..
-          fi
-          if echo "$CRATES" | grep -q '"stark-v"'; then
-            cd stark-v && cargo build --release && cd ..
           fi
 
   bench:
@@ -316,7 +312,6 @@ jobs:
             miden/target
             cairo-m/target
             rookie-numbers/target
-            stark-v/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
@@ -375,14 +370,10 @@ jobs:
         if: ${{ contains(matrix.crate, 'cairo-m') }}
         uses: ./.github/actions/install-llvm
 
-      - name: Install Stark-V toolchain
-        if: ${{ contains(matrix.crate, 'stark-v') }}
-        run: rustup toolchain install nightly-2026-01-29 --profile minimal --component rustfmt --component clippy --target riscv32im-unknown-none-elf
-
       - name: Install RISC-V target for stark-v
         if: ${{ contains(matrix.crate, 'stark-v') }}
         run: |
-          rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-01-29
+          rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-04
 
       - name: Install circom
         if: ${{ contains(matrix.crate, 'circom') }}
@@ -413,7 +404,7 @@ jobs:
           fi
 
       - name: Build and copy excluded memory benchmark binary to workspace target
-        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'miden') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') || contains(matrix.crate, 'stark-v') }}
+        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'miden') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') }}
         run: |
           mkdir -p target/release
           if [ "${{ matrix.crate }}" = "binius64" ]; then
@@ -427,11 +418,6 @@ jobs:
           elif [ "${{ matrix.crate }}" = "rookie-numbers" ]; then
             cd rookie-numbers && cargo build --release --bin sha256_mem_rookie_numbers && cd ..
             cp rookie-numbers/target/release/sha256_mem_rookie_numbers target/release/
-          elif [ "${{ matrix.crate }}" = "stark-v" ]; then
-            cd stark-v && cargo build --release --bin sha256_mem_stark_v --bin keccak_mem_stark_v --bin blake3_mem_stark_v && cd ..
-            cp stark-v/target/release/sha256_mem_stark_v target/release/
-            cp stark-v/target/release/keccak_mem_stark_v target/release/
-            cp stark-v/target/release/blake3_mem_stark_v target/release/
           fi
 
       - name: Run benches in ${{ matrix.crate }}
@@ -456,7 +442,7 @@ jobs:
           fi
 
       - name: Copy excluded crates criterion results to workspace target
-        if: ${{ contains(matrix.crate, 'miden') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') || contains(matrix.crate, 'stark-v') }}
+        if: ${{ contains(matrix.crate, 'miden') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') }}
         run: |
           mkdir -p target/criterion
           cp -r ${{ matrix.crate }}/target/criterion/* target/criterion/
