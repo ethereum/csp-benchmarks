@@ -23,4 +23,4 @@ The Python reference checks the Straus sentinel `D` and terminal constant `C`, r
 
 ## Validation boundaries
 
-Groth16 proving, verification, and benchmark timings require a zkey matching the compiled circuit. The `ecdsa_32_0001.zkey` listed in `checksums.sha256` was generated for the previous circuit and does not match this one. The regressions provide executable coverage, not a formal proof of this Circom implementation.
+Groth16 proving, verification, and benchmark timings require a zkey matching the compiled circuit. The benchmark runs by default with the key listed in `checksums.sha256`; [Circom benchmark instructions](../README.md#run-the-benchmarks) describe downloading and verifying it. The regressions provide executable coverage, not a formal proof of this Circom implementation.

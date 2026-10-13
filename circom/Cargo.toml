@@ -4,10 +4,6 @@ version = "0.1.0"
 edition = "2024"
 build = "build.rs"
 
-[features]
-# Enable after a maintainer publishes the zkey generated from ecdsa_p256_32.
-circom-ecdsa-p256-bench = []
-
 [dependencies]
 circom-prover = { version = "0.1", default-features = false, features = ["witnesscalc", "rapidsnark"] }
 witnesscalc-adapter = "0.1"
@@ -39,7 +35,6 @@ harness = false
 [[bench]]
 name = "ecdsa_p256_bench"
 harness = false
-required-features = ["circom-ecdsa-p256-bench"]
 
 [[bench]]
 name = "poseidon_bench"
