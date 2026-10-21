@@ -1,35 +1,18 @@
-# Flock Benchmarks
+# Flock benchmarks
 
-This crate integrates SHA-256 and Keccak-256 full hash proof paths built on
-Flock's upstream hash cores into the shared benchmark harness.
+The SHA-256 and BLAKE3 benchmarks use [Flock revision b684b125](https://github.com/succinctlabs/flock/tree/b684b1258e4b1f202bec24afd660ace851b09e5e). Both reuse upstream compression circuits. Repository wrappers assemble the SHA-256 padding and compression chain, and BLAKE3 chunks and parent compression.
 
-The shared harness passes the canonical byte size values used by the other
-systems.
+Flock builds in a separate Cargo workspace because ProveKit's `blake3/traits-preview` feature breaks compilation of Flock's transcript crate. Its Cargo configuration writes binaries and Criterion reports to the repository's shared target directory.
 
-SHA-256 uses a full hash wrapper assembled from Flock's upstream fast batched
-compression layout: one compression per outer slot, upstream fused witness
-generation, and the upstream fixed `K_LOG`. The wrapper adds separate checks for
-SHA padding and length constants, chaining values between compressions, and
-public digest openings.
+Proofs use Flock's circuit wiring argument and Ligerito PCS with the `Fast` profile. The benchmark records the upstream profile's 128-bit security target and `is_zk: false`. ARM64 uses the upstream AG zerocheck; other architectures use its RS implementation. Proving includes witness generation; verification uses the complete circuit verifier.
 
-Keccak-256 uses Flock's upstream Keccak-f1600 permutation walker, with an added
-sponge relation layer over the same fast batched core layout: one permutation
-per outer slot, upstream fused witness generation, and the upstream fixed
-`K_LOG`. The wrapper constrains capacity carryover, fixed padding bits, and the
-final padded block, then opens the packed cells in the final state that contain
-the digest. Because Flock's state layout is contiguous by lane, those public
-openings can reveal additional bits from the final state in the same cells. Flock
-is recorded as non-ZK in the benchmark metadata, so this is acceptable for these
-rows.
+Release builds use ThinLTO and one codegen unit; the benchmark profile inherits these settings, so timing and memory measurements use the same compiler configuration. Builds enable native CPU instructions, and Flock chooses thread counts from the host's core topology.
 
-The reported `preprocessing_size` is the serialized public Flock setup artifact:
-hash kind, setup shape derived from the byte input, PCS params, statement
-digest, and the upstream `BlockR1cs` layout. For SHA-256 this includes the
-materialized sparse R1CS matrices. For Keccak-256, upstream Flock uses a
-hardcoded permutation lincheck walker with an empty R1CS matrix stub, so the
-serialized setup is smaller than a system that serializes all Keccak constraints
-as table data.
+`preprocessing_size` measures the serialized public setup: sparse R1CS matrices, IO schemas, gate counts, fixed constants, circuit wiring, statement digests and PCS parameters. `num_constraints` counts the Boolean R1CS rows for the actual compressions. Unused capacity is filled with zeros to fit the supported PCS configurations.
 
-The reported `num_constraints` is bit level R1CS row count over Flock's binary
-field. This is the unit Flock exposes, but it is not directly comparable to
-word level constraint counts reported by systems such as Binius64.
+Run both targets with the reduced input profile:
+
+```bash
+cd flock
+BENCH_INPUT_PROFILE=reduced cargo bench
+```

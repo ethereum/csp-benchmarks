@@ -1,505 +1,310 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::array;
 
-use flock_prover::chain::{ChainShiftProof, verify_chain_shift};
-use flock_prover::challenger::{Challenger, FsChallenger};
+use flock_prover::circuit::builder::{CircuitShape, GateType, ShapeBuilder, SlotId, SlotWitness};
 use flock_prover::field::F128;
-use flock_prover::pcs::{
-    self, Commitment, DirectEqInd, LOG_PACKING, PackedDirectClaim, PackedDirectClaimRef, PcsParams,
-};
 use flock_prover::r1cs::BlockR1cs;
-use flock_prover::r1cs_hashes::chain_common::{ChainFold, ChainLayout};
-use flock_prover::r1cs_hashes::sha2::{self, Compression, Sha256HybridSetup};
-use flock_prover::zerocheck::PaddingSpec;
-use serde::{Deserialize, Serialize};
+use flock_prover::r1cs_hashes::sha2::{self, Compression};
+use flock_prover::schedule::{IoWord, TableType};
 
+use crate::circuit::{CircuitProof, CircuitSetup, WitnessBuffers, pack4, pack8, unpack4, unpack8};
 use crate::{SHA256_BLOCK_BYTES, SHA256_LEN_BYTES, sha256_compression_count};
 
-#[derive(Debug)]
 pub struct FullSha256Setup {
-    pub r1cs: BlockR1cs,
-    pub pcs_params: PcsParams,
-    input_size: usize,
-    pub n_compressions: usize,
-    core: Sha256HybridSetup,
-    compressions: Vec<Compression>,
-    digest_words: [u32; 8],
-    chain_end_words: [u32; 8],
-    required_cells: BTreeSet<usize>,
+    pub(crate) circuit: CircuitSetup<Sha256Gate>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct FullSha256Proof {
-    pub zerocheck: flock_prover::zerocheck::ZerocheckProof,
-    pub lincheck: flock_prover::lincheck::LincheckProof,
-    pub shift: ChainShiftProof,
-    pub pcs_open: pcs::BatchOpeningProof,
-    pub commitment: Commitment,
-    pub opened_cells: Vec<CellOpening>,
+pub type FullSha256Proof = CircuitProof;
+
+pub(crate) struct Sha256Gate {
+    r1cs: BlockR1cs,
 }
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-pub struct CellOpening {
-    packed_index: usize,
-    value: F128,
+impl GateType for Sha256Gate {
+    type Row = Compression;
+    type Hint = ();
+
+    fn table(&self) -> TableType {
+        // The pinned upstream layout puts H_in at bits 0..256, H_out at
+        // 256..512, and the message block at 512..1024. Keep all matrices
+        // unchanged and expose these aligned words to the wiring argument.
+        TableType::from_block_r1cs(&self.r1cs).with_io_schema(vec![
+            IoWord::input(0),
+            IoWord::input(1),
+            IoWord::input(4),
+            IoWord::input(5),
+            IoWord::input(6),
+            IoWord::input(7),
+            IoWord::output(2),
+            IoWord::output(3),
+        ])
+    }
+
+    fn eval(&self, inputs: &[F128], _hint: &(), outputs: &mut Vec<F128>) -> Compression {
+        let cv = unpack8(inputs[0], inputs[1]);
+        let mut message = [0u32; 16];
+        for (words, &packed) in message.chunks_exact_mut(4).zip(&inputs[2..]) {
+            words.copy_from_slice(&unpack4(packed));
+        }
+        outputs.extend_from_slice(&pack8(&sha2::sha256_compress(&cv, &message)));
+        (cv, message)
+    }
+
+    fn witness(&self, _rows: &[Compression], _nu: usize) -> SlotWitness {
+        SlotWitness::DeferredToRows
+    }
 }
 
-#[allow(dead_code)]
-#[derive(Debug)]
-enum FullSha256VerifyError {
-    R1cs(flock_prover::verifier::VerifyError),
-    Chain(flock_prover::chain::ChainError),
-    Pcs(pcs::VerifyError),
-    OpenedCells,
-    Relation,
+fn padding_block(input_size: usize) -> [u8; SHA256_BLOCK_BYTES] {
+    assert!(
+        input_size.is_multiple_of(SHA256_BLOCK_BYTES),
+        "SHA-256 benchmark inputs must contain complete 64-byte blocks"
+    );
+    let mut padding = [0u8; SHA256_BLOCK_BYTES];
+    padding[0] = 0x80;
+    let bit_len = u64::try_from(input_size)
+        .expect("SHA-256 input length fits u64")
+        .checked_mul(8)
+        .expect("SHA-256 bit length fits u64");
+    padding[SHA256_BLOCK_BYTES - SHA256_LEN_BYTES..].copy_from_slice(&bit_len.to_be_bytes());
+    padding
+}
+
+fn pack_block(bytes: &[u8]) -> [F128; 4] {
+    array::from_fn(|i| {
+        pack4(array::from_fn(|j| {
+            let offset = 16 * i + 4 * j;
+            u32::from_be_bytes(bytes[offset..offset + 4].try_into().unwrap())
+        }))
+    })
+}
+
+fn describe(input_size: usize) -> (CircuitShape, Vec<(SlotId, BlockR1cs)>, usize) {
+    let padding = padding_block(input_size);
+    let n_compressions = sha256_compression_count(input_size);
+    // The published PCS configurations start at m=22. One k_log=15 table
+    // therefore needs nu>=7; actual gate counts remain the message's count.
+    let nu = (n_compressions.next_power_of_two().ilog2() as usize).max(7);
+    let r1cs = sha2::build_block_r1cs(nu);
+    let mut builder = ShapeBuilder::new(nu);
+    let slot = builder.slot(Sha256Gate { r1cs: r1cs.clone() });
+    let mut cv = pack8(&sha2::SHA256_IV).map(|word| builder.fixed_public_input(word));
+
+    for _ in 0..input_size / SHA256_BLOCK_BYTES {
+        let message = array::from_fn::<_, 4, _>(|_| builder.input());
+        let inputs = [cv[0], cv[1], message[0], message[1], message[2], message[3]];
+        cv = builder.gate(slot, &inputs).try_into().unwrap();
+    }
+
+    // The entire final block is fixed by the circuit: marker, zero padding,
+    // and the big-endian message length. Data blocks remain private inputs.
+    let padding = pack_block(&padding).map(|word| builder.fixed_public_input(word));
+    let inputs = [cv[0], cv[1], padding[0], padding[1], padding[2], padding[3]];
+    let digest = builder.gate(slot, &inputs);
+    for word in digest {
+        builder.publish(word);
+    }
+
+    (
+        builder
+            .finish()
+            .expect("SHA-256 circuit shape must be valid"),
+        vec![(slot, r1cs)],
+        nu,
+    )
+}
+
+fn generate_witness(rows: &[Compression], nu: usize) -> WitnessBuffers {
+    sha2::generate_witness_batch_major_partial(rows, nu)
 }
 
 pub fn prepare(input_size: usize) -> FullSha256Setup {
     let _ = flock_prover::init_perf_thread_pool();
-
-    let (mut compressions, digest_words) = build_message_compressions(input_size);
-    let n_compressions = compressions.len();
-    let n_slots = n_compressions.max(8).next_power_of_two();
-    let mut chain_cv = digest_words;
-    while compressions.len() < n_slots {
-        let filler = [0u32; 16];
-        compressions.push((chain_cv, filler));
-        chain_cv = sha2::sha256_compress(&chain_cv, &filler);
+    let (message, expected_digest) = utils::generate_sha256_input(input_size);
+    let padding = padding_block(input_size);
+    let iv = pack8(&sha2::SHA256_IV);
+    let padding_words = pack_block(&padding);
+    let mut inputs = iv.to_vec();
+    for block in message.chunks_exact(SHA256_BLOCK_BYTES) {
+        inputs.extend(pack_block(block));
     }
+    inputs.extend(padding_words);
 
-    let core = Sha256HybridSetup::new(n_slots);
-    let r1cs = core.r1cs.clone();
-    let pcs_params = core.pcs_params.clone();
-    let required_cells = required_cells(input_size, n_compressions);
+    // Build the verifier's expected digest from the independent input
+    // generator, rather than from the gate evaluator or a prover result.
+    let digest_words = array::from_fn(|i| {
+        u32::from_be_bytes(expected_digest[4 * i..4 * i + 4].try_into().unwrap())
+    });
+    let mut public = iv.to_vec();
+    public.extend(padding_words);
+    public.extend(pack8(&digest_words));
 
+    let (shape, slots, nu) = describe(input_size);
     FullSha256Setup {
-        r1cs,
-        pcs_params,
-        input_size,
-        n_compressions,
-        core,
-        compressions,
-        digest_words,
-        chain_end_words: chain_cv,
-        required_cells,
+        circuit: CircuitSetup::new(
+            shape,
+            slots,
+            nu,
+            inputs,
+            Vec::new(),
+            public,
+            generate_witness,
+        ),
     }
 }
 
 pub fn prove(setup: &FullSha256Setup, transcript_domain: &[u8]) -> FullSha256Proof {
-    let (z_packed, a_packed, b_packed, z_lincheck) =
-        sha2::generate_witness_with_ab_packed_and_lincheck(
-            &setup.compressions,
-            setup.core.n_blocks_log(),
-        );
-
-    let mut challenger = FsChallenger::new(transcript_domain);
-    let core = flock_prover::prover::prove_fast_core(
-        &setup.r1cs,
-        &setup.pcs_params,
-        z_packed,
-        a_packed,
-        b_packed,
-        z_lincheck,
-        setup.r1cs.csc_lincheck_circuit(),
-        &mut challenger,
-    );
-
-    let tau_pos = challenger.sample_f128_vec(sha2::CHAIN_LAYOUT.tau_pos_len());
-    let fold = ChainFold::new(&sha2::CHAIN_LAYOUT, tau_pos);
-    let (in_vals, out_vals) = flock_prover::r1cs_hashes::chain_common::fold_in_out(
-        &sha2::CHAIN_LAYOUT,
-        setup.r1cs.layout,
-        &core.z_packed,
-        &fold,
-    );
-    let (shift, chain_claims) =
-        flock_prover::chain::prove_chain_shift(&in_vals, &out_vals, &mut challenger);
-    let chain_claim = flock_prover::r1cs_hashes::chain_common::assemble_chain_claim(
-        &sha2::CHAIN_LAYOUT,
-        setup.r1cs.layout,
-        &fold,
-        &chain_claims,
-    );
-
-    let opened_cells = collect_opened_cells(&core.z_packed, &setup.required_cells);
-    let direct_claims: Vec<PackedDirectClaim> = opened_cells
-        .iter()
-        .map(|cell| packed_direct_claim(setup.r1cs.m, *cell))
-        .collect();
-    let mut packed_direct = Vec::with_capacity(1 + direct_claims.len());
-    packed_direct.push(chain_claim);
-    packed_direct.extend(direct_claims);
-
-    let padding = PaddingSpec {
-        k_log: setup.r1cs.k_log,
-        useful_bits_per_block: setup.r1cs.useful_bits,
-    };
-    let ab_x_outer = quirky_x_outer_full(&core.ab.point);
-    let c_x_outer = quirky_x_outer_full(&core.c.point);
-    let pre_ab = core.s_hat_v_ab.as_deref();
-    let pre_c = Some(core.s_hat_v_c.as_slice());
-    let pcs_open = pcs::open_batch_mixed_with_precomputed_s_hat_v(
-        &core.z_packed,
-        &core.prover_data,
-        &core.commitment,
-        &[ab_x_outer.as_slice(), c_x_outer.as_slice()],
-        &[pre_ab, pre_c],
-        &packed_direct,
-        &padding,
-        &mut challenger,
-    );
-
-    FullSha256Proof {
-        zerocheck: core.zc_proof,
-        lincheck: core.lc_proof,
-        shift,
-        pcs_open,
-        commitment: core.commitment,
-        opened_cells,
-    }
+    setup.circuit.prove(transcript_domain)
 }
 
 pub fn verify(setup: &FullSha256Setup, proof: &FullSha256Proof, transcript_domain: &[u8]) {
-    verify_result(setup, proof, transcript_domain)
+    setup
+        .circuit
+        .verify(proof, transcript_domain)
         .expect("Flock full SHA-256 digest proof must verify");
 }
 
-fn verify_result(
-    setup: &FullSha256Setup,
-    proof: &FullSha256Proof,
-    transcript_domain: &[u8],
-) -> Result<(), FullSha256VerifyError> {
-    let opened = opened_cell_map(&proof.opened_cells, &setup.required_cells)?;
-    check_relations(setup, &opened)?;
-
-    let mut challenger = FsChallenger::new(transcript_domain);
-    let (ab, c) = flock_prover::verifier::verify_core(
-        &setup.r1cs,
-        &proof.zerocheck,
-        &proof.lincheck,
-        &proof.commitment,
-        setup.r1cs.csc_lincheck_circuit(),
-        &mut challenger,
-    )
-    .map_err(FullSha256VerifyError::R1cs)?;
-
-    let tau_pos = challenger.sample_f128_vec(sha2::CHAIN_LAYOUT.tau_pos_len());
-    let fold = ChainFold::new(&sha2::CHAIN_LAYOUT, tau_pos);
-    let x0_r = fold.fold_public_phys(&sha2::cv_to_phys_bits(&sha2::SHA256_IV));
-    let xlast_r = fold.fold_public_phys(&sha2::cv_to_phys_bits(&setup.chain_end_words));
-    let chain_claims = verify_chain_shift(
-        &proof.shift,
-        x0_r,
-        xlast_r,
-        setup.core.n_blocks_log(),
-        &mut challenger,
-    )
-    .map_err(FullSha256VerifyError::Chain)?;
-    let chain_point = build_chain_claim_point(&sha2::CHAIN_LAYOUT, &fold, &chain_claims);
-
-    let ab_x_outer = quirky_x_outer_full(&ab.point);
-    let c_x_outer = quirky_x_outer_full(&c.point);
-    let opened_points: Vec<Vec<F128>> = proof
-        .opened_cells
-        .iter()
-        .map(|cell| packed_index_point(setup.r1cs.m, cell.packed_index))
-        .collect();
-    let mut direct_refs = Vec::with_capacity(1 + proof.opened_cells.len());
-    direct_refs.push(PackedDirectClaimRef {
-        point: chain_point.as_slice(),
-        value: chain_claims.value,
-    });
-    direct_refs.extend(
-        proof
-            .opened_cells
-            .iter()
-            .zip(opened_points.iter())
-            .map(|(cell, point)| PackedDirectClaimRef {
-                point: point.as_slice(),
-                value: cell.value,
-            }),
-    );
-
-    pcs::verify_opening_batch_mixed(
-        &proof.commitment,
-        &[ab.value, c.value],
-        &[ab.point.z_skip, c.point.z_skip],
-        &[ab_x_outer.as_slice(), c_x_outer.as_slice()],
-        &direct_refs,
-        &proof.pcs_open,
-        &mut challenger,
-    )
-    .map_err(FullSha256VerifyError::Pcs)?;
-
-    Ok(())
+pub fn num_constraints(setup: &FullSha256Setup) -> usize {
+    setup.circuit.num_constraints()
 }
 
-pub fn num_constraints(setup: &FullSha256Setup) -> usize {
-    setup.r1cs.useful_bits * setup.r1cs.n_outer()
+pub fn preprocessing_size(setup: &FullSha256Setup) -> usize {
+    setup.circuit.preprocessing_size()
 }
 
 pub fn proof_size(proof: &FullSha256Proof) -> usize {
-    bincode::serialize(proof)
-        .expect("Flock full SHA-256 proof must serialize")
-        .len()
-}
-
-fn build_message_compressions(input_size: usize) -> (Vec<Compression>, [u32; 8]) {
-    let (message, expected_digest) = utils::generate_sha256_input(input_size);
-    let mut padded = message;
-    let bit_len = (input_size as u64) * 8;
-
-    padded.push(0x80);
-    while padded.len() % SHA256_BLOCK_BYTES != SHA256_BLOCK_BYTES - SHA256_LEN_BYTES {
-        padded.push(0);
-    }
-    padded.extend_from_slice(&bit_len.to_be_bytes());
-
-    assert_eq!(
-        padded.len() / SHA256_BLOCK_BYTES,
-        sha256_compression_count(input_size)
-    );
-
-    let mut cv = sha2::SHA256_IV;
-    let mut blocks = Vec::with_capacity(padded.len() / SHA256_BLOCK_BYTES);
-    for chunk in padded.chunks_exact(SHA256_BLOCK_BYTES) {
-        let message_block: [u32; 16] = std::array::from_fn(|i| {
-            let start = i * 4;
-            u32::from_be_bytes([
-                chunk[start],
-                chunk[start + 1],
-                chunk[start + 2],
-                chunk[start + 3],
-            ])
-        });
-        blocks.push((cv, message_block));
-        cv = sha2::sha256_compress(&cv, &message_block);
-    }
-
-    let digest: Vec<u8> = cv.iter().flat_map(|word| word.to_be_bytes()).collect();
-    assert_eq!(digest, expected_digest);
-    (blocks, cv)
-}
-
-fn required_cells(input_size: usize, n_compressions: usize) -> BTreeSet<usize> {
-    let mut cells = BTreeSet::new();
-    let final_slot = n_compressions - 1;
-
-    for cell in 0..2 {
-        cells.insert(h_out_cell(final_slot, cell));
-    }
-
-    let total_bytes = n_compressions * SHA256_BLOCK_BYTES;
-    for byte_idx in input_size..total_bytes {
-        let block_idx = byte_idx / SHA256_BLOCK_BYTES;
-        let byte_in_block = byte_idx % SHA256_BLOCK_BYTES;
-        let word = byte_in_block / 4;
-        let byte_in_word = byte_in_block % 4;
-        for bit in 0..8 {
-            let word_bit = (3 - byte_in_word) * 8 + bit;
-            cells.insert(cell_for_bit(global_bit(
-                block_idx,
-                sha2::m_bit(word, word_bit),
-            )));
-        }
-    }
-
-    cells
-}
-
-fn check_relations(
-    setup: &FullSha256Setup,
-    opened: &BTreeMap<usize, F128>,
-) -> Result<(), FullSha256VerifyError> {
-    let final_slot = setup.n_compressions - 1;
-    for cell in 0..2 {
-        let value = opened_value(opened, h_out_cell(final_slot, cell))?;
-        if value != digest_cell_value(&setup.digest_words, cell * 4) {
-            return Err(FullSha256VerifyError::Relation);
-        }
-    }
-
-    let n_compressions = setup.n_compressions;
-    let total_bytes = n_compressions * SHA256_BLOCK_BYTES;
-    let bit_len = (setup.input_size as u64) * 8;
-    let expected_len_bytes = bit_len.to_be_bytes();
-    for byte_idx in setup.input_size..total_bytes {
-        let expected = if byte_idx == setup.input_size {
-            0x80
-        } else if byte_idx >= total_bytes - SHA256_LEN_BYTES {
-            expected_len_bytes[byte_idx - (total_bytes - SHA256_LEN_BYTES)]
-        } else {
-            0
-        };
-        check_padding_byte(opened, byte_idx, expected)?;
-    }
-
-    Ok(())
-}
-
-fn check_padding_byte(
-    opened: &BTreeMap<usize, F128>,
-    byte_idx: usize,
-    expected: u8,
-) -> Result<(), FullSha256VerifyError> {
-    let block_idx = byte_idx / SHA256_BLOCK_BYTES;
-    let byte_in_block = byte_idx % SHA256_BLOCK_BYTES;
-    let word = byte_in_block / 4;
-    let byte_in_word = byte_in_block % 4;
-    for bit in 0..8 {
-        let word_bit = (3 - byte_in_word) * 8 + bit;
-        let bit_index = global_bit(block_idx, sha2::m_bit(word, word_bit));
-        let value = opened_value(opened, cell_for_bit(bit_index))?;
-        let got = f128_bit(value, bit_index & 127);
-        let want = (expected >> bit) & 1 == 1;
-        if got != want {
-            return Err(FullSha256VerifyError::Relation);
-        }
-    }
-    Ok(())
-}
-
-fn collect_opened_cells(z_packed: &[F128], required: &BTreeSet<usize>) -> Vec<CellOpening> {
-    required
-        .iter()
-        .map(|&packed_index| CellOpening {
-            packed_index,
-            value: z_packed[packed_index],
-        })
-        .collect()
-}
-
-fn opened_cell_map(
-    opened_cells: &[CellOpening],
-    required: &BTreeSet<usize>,
-) -> Result<BTreeMap<usize, F128>, FullSha256VerifyError> {
-    let mut map = BTreeMap::new();
-    for cell in opened_cells {
-        if map.insert(cell.packed_index, cell.value).is_some() {
-            return Err(FullSha256VerifyError::OpenedCells);
-        }
-    }
-    let got: BTreeSet<usize> = map.keys().copied().collect();
-    if &got != required {
-        return Err(FullSha256VerifyError::OpenedCells);
-    }
-    Ok(map)
-}
-
-fn opened_value(
-    opened: &BTreeMap<usize, F128>,
-    packed_index: usize,
-) -> Result<F128, FullSha256VerifyError> {
-    opened
-        .get(&packed_index)
-        .copied()
-        .ok_or(FullSha256VerifyError::OpenedCells)
-}
-
-fn digest_cell_value(digest_words: &[u32; 8], first_word: usize) -> F128 {
-    let mut value = F128::ZERO;
-    for word_offset in 0..4 {
-        let word = digest_words[first_word + word_offset];
-        for bit in 0..32 {
-            if (word >> bit) & 1 == 1 {
-                let packed_bit = word_offset * 32 + bit;
-                if packed_bit < 64 {
-                    value.lo |= 1u64 << packed_bit;
-                } else {
-                    value.hi |= 1u64 << (packed_bit - 64);
-                }
-            }
-        }
-    }
-    value
-}
-
-fn h_out_cell(slot: usize, cell: usize) -> usize {
-    debug_assert!(cell < 2);
-    cell_for_bit(global_bit(
-        slot,
-        sha2::H_OUT_BASE + cell * (1 << LOG_PACKING),
-    ))
-}
-
-fn global_bit(slot: usize, local_bit: usize) -> usize {
-    (slot << sha2::K_LOG) + local_bit
-}
-
-fn cell_for_bit(bit_index: usize) -> usize {
-    bit_index >> LOG_PACKING
-}
-
-fn f128_bit(value: F128, bit: usize) -> bool {
-    if bit < 64 {
-        (value.lo >> bit) & 1 == 1
-    } else {
-        (value.hi >> (bit - 64)) & 1 == 1
-    }
-}
-
-fn packed_direct_claim(m: usize, cell: CellOpening) -> PackedDirectClaim {
-    let point = packed_index_point(m, cell.packed_index);
-    let eq_ind = DirectEqInd::Sparse(pcs::ring_switch::build_eq_sparse(&point));
-    PackedDirectClaim {
-        point,
-        value: cell.value,
-        eq_ind,
-    }
-}
-
-fn packed_index_point(m: usize, packed_index: usize) -> Vec<F128> {
-    let point_len = m - LOG_PACKING;
-    assert!(packed_index < (1usize << point_len));
-    (0..point_len)
-        .map(|bit| {
-            if (packed_index >> bit) & 1 == 1 {
-                F128::ONE
-            } else {
-                F128::ZERO
-            }
-        })
-        .collect()
-}
-
-fn build_chain_claim_point(
-    layout: &ChainLayout,
-    fold: &ChainFold,
-    claims: &flock_prover::chain::ChainClaims,
-) -> Vec<F128> {
-    let high = layout.high_zeros();
-    let mut point = Vec::with_capacity(fold.tau_pos.len() + 1 + high + claims.instance_point.len());
-    point.extend_from_slice(&fold.tau_pos);
-    point.push(claims.sel0);
-    point.extend(std::iter::repeat_n(F128::ZERO, high));
-    point.extend_from_slice(&claims.instance_point);
-    point
-}
-
-fn quirky_x_outer_full(point: &flock_prover::lincheck::QuirkyPoint) -> Vec<F128> {
-    let mut v = Vec::with_capacity(point.x_inner_rest.len() + point.x_outer.len());
-    v.extend_from_slice(&point.x_inner_rest);
-    v.extend_from_slice(&point.x_outer);
-    v
+    proof.proof_size()
 }
 
 #[cfg(test)]
 mod tests {
+    use std::any::Any;
+
+    use flock_prover::circuit::{Cell, Circuit};
+
     use super::*;
 
     #[test]
-    fn public_digest_opening_rejects_mutation() {
-        let setup = prepare(128);
-        let mut proof = prove(&setup, b"full-sha256-digest-binding-test");
-        let digest_cell = h_out_cell(setup.n_compressions - 1, 0);
-        proof
-            .opened_cells
-            .iter_mut()
-            .find(|cell| cell.packed_index == digest_cell)
-            .expect("digest cell opening")
-            .value
-            .lo ^= 1;
+    fn iv_and_complete_padding_block_are_fixed_public_inputs() {
+        let (shape, _, _) = describe(128);
+        let mut public = pack8(&sha2::SHA256_IV).to_vec();
+        public.extend(pack_block(&padding_block(128)));
+        public.extend([F128::ZERO; 2]);
+        assert!(shape.circuit.check_public(&public));
 
-        let result = verify_result(&setup, &proof, b"full-sha256-digest-binding-test");
-        assert!(result.is_err());
+        for i in 0..6 {
+            let mut changed = public.clone();
+            changed[i] += F128::ONE;
+            assert!(!shape.circuit.check_public(&changed));
+        }
+        let padding = padding_block(128);
+        assert_eq!(padding[0], 0x80);
+        assert!(padding[1..56].iter().all(|&byte| byte == 0));
+        assert_eq!(&padding[56..], &1024u64.to_be_bytes());
+    }
+
+    #[test]
+    fn every_compression_output_is_wired_to_the_next_input() {
+        let (shape, _, _) = describe(128);
+        let wires = shape.circuit.wires();
+        let index = |cell| shape.circuit.cells().cell_index(cell);
+        for row in 0..2 {
+            for word in 0..2 {
+                assert!(wires.iter().any(|wire| {
+                    wire.contains(&index(Cell::new(6 + word, row)))
+                        && wire.contains(&index(Cell::new(word, row + 1)))
+                }));
+            }
+        }
+        for word in 0..2 {
+            assert!(wires.iter().any(|wire| {
+                wire.contains(&index(Cell::new(6 + word, 2)))
+                    && wire.contains(&index(Cell::new(8, 6 + word)))
+            }));
+        }
+    }
+
+    #[test]
+    fn prepared_statement_uses_the_independent_digest() {
+        for input_size in [128, 256, 512, 1024, 2048] {
+            let prepared = prepare(input_size);
+            let hints: &[&(dyn Any + Sync)] = &[];
+            let witness = prepared.circuit.shape.run(&prepared.circuit.inputs, hints);
+            assert_eq!(witness.public, prepared.circuit.public, "size {input_size}");
+            assert_eq!(
+                prepared.circuit.shape.counts[0],
+                sha256_compression_count(input_size)
+            );
+
+            let mut changed_digest = prepared.circuit.public.clone();
+            changed_digest[6] += F128::ONE;
+            assert_ne!(witness.public, changed_digest);
+        }
+    }
+
+    #[test]
+    fn proof_binds_the_public_digest_and_compression_chain() {
+        let mut prepared = prepare(128);
+        let proof = prepared.circuit.prove(crate::TRANSCRIPT_DOMAIN);
+        prepared
+            .circuit
+            .verify(&proof, crate::TRANSCRIPT_DOMAIN)
+            .unwrap();
+
+        prepared.circuit.public[6] += F128::ONE;
+        assert!(
+            prepared
+                .circuit
+                .verify(&proof, crate::TRANSCRIPT_DOMAIN)
+                .is_err()
+        );
+        prepared.circuit.public[6] += F128::ONE;
+
+        // Keep the same matrices, dimensions, invocation counts and public
+        // values, but exchange the two CV words on the first chain edge.
+        let old_digest = prepared.circuit.shape.circuit.digest();
+        let nu = prepared.circuit.nu;
+        let swapped = [Cell::new(0, 1), Cell::new(1, 1)];
+        let wires = prepared
+            .circuit
+            .shape
+            .circuit
+            .wires()
+            .iter()
+            .map(|wire| {
+                wire.iter()
+                    .map(|&index| {
+                        let cell = Cell::new(index >> nu, index & ((1 << nu) - 1));
+                        if cell == swapped[0] {
+                            swapped[1]
+                        } else if cell == swapped[1] {
+                            swapped[0]
+                        } else {
+                            cell
+                        }
+                    })
+                    .collect()
+            })
+            .collect();
+        let fixed_public = prepared
+            .circuit
+            .public
+            .iter()
+            .enumerate()
+            .map(|(index, &value)| (index < 6).then_some(value))
+            .collect();
+        prepared.circuit.shape.circuit = Circuit::new_with_fixed_public(
+            &prepared.circuit.shape.registry,
+            prepared.circuit.shape.counts.clone(),
+            fixed_public,
+            wires,
+        )
+        .unwrap();
+        assert_ne!(prepared.circuit.shape.circuit.digest(), old_digest);
+        assert!(
+            prepared
+                .circuit
+                .verify(&proof, crate::TRANSCRIPT_DOMAIN)
+                .is_err()
+        );
     }
 }

@@ -10,10 +10,11 @@ members = [
     "risc0",
     "stark-v",
     "vega",
-    "flock",
     "utils",
 ]
 exclude = [
+    # Flock's transcript is incompatible with ProveKit's BLAKE3 traits-preview feature.
+    "flock",
     # Miden's BLAKE3 dependency conflicts with ProveKit's exact version.
     "miden",
     # Binius64 uses its own Rust toolchain.
