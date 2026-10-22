@@ -245,7 +245,7 @@ jobs:
             cd miden && cargo build --release && cd ..
           fi
           if echo "$CRATES" | grep -q '"cairo-m"'; then
-            cd cairo-m && cargo build --release && cd ..
+            cd cairo-m && ../.github/actions/install-llvm/with-llvm.sh cargo build --release && cd ..
           fi
           if echo "$CRATES" | grep -q '"rookie-numbers"'; then
             cd rookie-numbers && cargo build --release && cd ..
@@ -396,7 +396,7 @@ jobs:
             cd miden && cargo build --release --bin sha256_mem_miden --bin blake3_mem_miden --bin ecdsa_mem_miden && cd ..
             cp miden/target/release/sha256_mem_miden miden/target/release/blake3_mem_miden miden/target/release/ecdsa_mem_miden target/release/
           elif [ "${{ matrix.crate }}" = "cairo-m" ]; then
-            cd cairo-m && cargo build --release --bin sha256_mem_cairo_m && cd ..
+            cd cairo-m && ../.github/actions/install-llvm/with-llvm.sh cargo build --release --bin sha256_mem_cairo_m && cd ..
             cp cairo-m/target/release/sha256_mem_cairo_m target/release/
           elif [ "${{ matrix.crate }}" = "rookie-numbers" ]; then
             cd rookie-numbers && cargo build --release --bin sha256_mem_rookie_numbers && cd ..
@@ -416,12 +416,16 @@ jobs:
           fi
           echo "Using BENCH_INPUT_PROFILE=$BENCH_INPUT_PROFILE for ${{ matrix.crate }}"
           cd ${{ matrix.crate }}
+          cargo_command=(cargo)
+          if [[ "${{ matrix.crate }}" == "cairo-m" ]]; then
+            cargo_command=(../.github/actions/install-llvm/with-llvm.sh cargo)
+          fi
           if [[ -n "$BENCHMARK_TARGET" ]]; then
             echo "Running targeted bench command: cargo bench --bench $BENCHMARK_TARGET"
-            cargo bench --bench "$BENCHMARK_TARGET"
+            "${cargo_command[@]}" bench --bench "$BENCHMARK_TARGET"
           else
             echo "Running bench command: cargo bench"
-            cargo bench
+            "${cargo_command[@]}" bench
           fi
 
       - name: Copy excluded crates criterion results to workspace target
