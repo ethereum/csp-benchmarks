@@ -363,6 +363,46 @@ jobs:
         id: circom_setup
         uses: ./.github/actions/install-circom
 
+      - name: Install Spartan-WHIR circuit dependencies
+        if: ${{ matrix.crate == 'spartan-whir' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git --no-pager submodule update --init circom/circomlib
+          if [[ "$(uname -s)" == "Darwin" ]]; then
+            brew list --versions gmp >/dev/null || brew install gmp
+            brew list --versions nlohmann-json >/dev/null || brew install nlohmann-json
+            echo "CPLUS_INCLUDE_PATH=$(brew --prefix)/include${CPLUS_INCLUDE_PATH:+:$CPLUS_INCLUDE_PATH}" >> "$GITHUB_ENV"
+            echo "LIBRARY_PATH=$(brew --prefix)/lib${LIBRARY_PATH:+:$LIBRARY_PATH}" >> "$GITHUB_ENV"
+          else
+            sudo apt-get update
+            sudo apt-get install -y libgmp-dev nlohmann-json3-dev
+          fi
+
+      - name: Cache KoalaBear Circom
+        if: ${{ matrix.crate == 'spartan-whir' }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.circom-koalabear
+          key: ${{ runner.os }}-${{ runner.arch }}-circom-koalabear-bb7ae6d406debbfe8afc68305cbd6106fda945bc
+
+      - name: Install KoalaBear Circom for Spartan-WHIR
+        if: ${{ matrix.crate == 'spartan-whir' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          INSTALL_DIR="$HOME/.circom-koalabear"
+          if [[ ! -x "$INSTALL_DIR/bin/circom" ]]; then
+            cargo install \
+              --git https://github.com/Client-Side-Proving/circom \
+              --rev bb7ae6d406debbfe8afc68305cbd6106fda945bc \
+              --locked \
+              --root "$INSTALL_DIR" \
+              circom
+          fi
+          echo "SPARTAN_WHIR_CIRCOM=$INSTALL_DIR/bin/circom" >> "$GITHUB_ENV"
+          "$INSTALL_DIR/bin/circom" --version
+
       - name: Cache the ECDSA witness generator
         if: ${{ contains(matrix.crate, 'circom') }}
         id: ecdsa_witness_cache
@@ -402,6 +442,12 @@ jobs:
             cd rookie-numbers && cargo build --release --bin sha256_mem_rookie_numbers && cd ..
             cp rookie-numbers/target/release/sha256_mem_rookie_numbers target/release/
           fi
+
+      - name: Validate Spartan-WHIR circuit integration
+        if: ${{ matrix.crate == 'spartan-whir' }}
+        env:
+          BENCH_INPUT_PROFILE: reduced
+        run: cargo test --release -p spartan-whir-bench --lib -- --include-ignored --test-threads=1
 
       - name: Run benches in ${{ matrix.crate }}
         run: |

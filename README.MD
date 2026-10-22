@@ -38,6 +38,7 @@ Our future plans include running the benchmarks in a cloud device farm (Android 
     - Stark-V guest compilation uses the root toolchain and requires the RISC-V target: `rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-04`.
     - Ensure `cargo`, `cmake`, and a recent `clang`/`lld` are available (the helper actions under [`.github/actions/install-llvm`](./.github/actions/install-llvm) show the expected setup). Install Homebrew packages `bash` and `jq`, plus `/usr/bin/time` for RAM measurements. Install the Hyperfine version specified in [`.hyperfine-version`](./.hyperfine-version) from its [release assets](https://github.com/sharkdp/hyperfine/releases) and ensure that binary is first on `PATH`.
     - Install per-system toolchains as needed: OpenMPI for `polyhedra-expander`, the Ligero prover stack for `ligetron`, Noir version >=1.0.0-beta.13 for `barretenberg`, and the RISC Zero SDK. Each folder documents its own bootstrap script and the matching GitHub Action ([`install-risc0`](./.github/actions/install-risc0), etc.) can be used as a reference.
+    - For `spartan-whir`, install the pinned KoalaBear Circom fork, GMP, and nlohmann JSON headers as described in its [README](./spartan-whir/README.md).
 2.  **Run the benchmarks**
     - Build the workspace once: `cargo build --release --workspace`. Rust crates with separate Cargo roots, such as `binius64/`, `miden/`, `provekit-groth16/`, `cairo-m/`, and `rookie-numbers/`, build from inside their own directories.
     - For Rust crates, run

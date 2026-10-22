@@ -65,6 +65,7 @@ pub enum ProvingSystem {
     StarkV,
     Flock,
     Halo2,
+    SpartanWhir,
     // Extend as needed
 }
 
@@ -86,6 +87,7 @@ impl ProvingSystem {
             ProvingSystem::StarkV => "stark-v",
             ProvingSystem::Flock => "flock",
             ProvingSystem::Halo2 => "halo2",
+            ProvingSystem::SpartanWhir => "spartan-whir",
         }
     }
 }
