@@ -107,7 +107,11 @@ jobs:
       - name: Build excluded crates
         run: |
           for crate in $EXCLUDED_CRATES; do
-            cd "$crate" && cargo build && cd ..
+            cargo_command=(cargo)
+            if [[ "$crate" == "cairo-m" ]]; then
+              cargo_command=(../.github/actions/install-llvm/with-llvm.sh cargo)
+            fi
+            cd "$crate" && "${cargo_command[@]}" build && cd ..
           done
 
       - name: Format
@@ -128,5 +132,9 @@ jobs:
       - name: Clippy excluded crates
         run: |
           for crate in $EXCLUDED_CRATES; do
-            cd "$crate" && cargo clippy --all-targets --all-features && cd ..
+            cargo_command=(cargo)
+            if [[ "$crate" == "cairo-m" ]]; then
+              cargo_command=(../.github/actions/install-llvm/with-llvm.sh cargo)
+            fi
+            cd "$crate" && "${cargo_command[@]}" clippy --all-targets --all-features && cd ..
           done

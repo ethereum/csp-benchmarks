@@ -11,7 +11,3 @@ runs:
         HOMEBREW_NO_ENV_HINTS: "1"
       run: |
         brew install llvm lld
-        echo "CC=/opt/homebrew/opt/llvm/bin/clang" >> "$GITHUB_ENV"
-        echo "CXX=/opt/homebrew/opt/llvm/bin/clang++" >> "$GITHUB_ENV"
-        echo "AR=/opt/homebrew/opt/llvm/bin/llvm-ar" >> "$GITHUB_ENV"
-        echo "RANLIB=/opt/homebrew/opt/llvm/bin/llvm-ranlib" >> "$GITHUB_ENV"
