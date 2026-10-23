@@ -40,7 +40,7 @@ Our future plans include running the benchmarks in a cloud device farm (Android 
     - Install per-system toolchains as needed: OpenMPI for `polyhedra-expander`, the Ligero prover stack for `ligetron`, Noir version >=1.0.0-beta.13 for `barretenberg`, and the RISC Zero SDK. Each folder documents its own bootstrap script and the matching GitHub Action ([`install-risc0`](./.github/actions/install-risc0), etc.) can be used as a reference.
     - For `spartan-whir`, install the pinned KoalaBear Circom fork, GMP, and nlohmann JSON headers as described in its [README](./spartan-whir/README.md).
 2.  **Run the benchmarks**
-    - Build the workspace once: `cargo build --release --workspace`. Rust crates with separate Cargo roots, such as `binius64/`, `miden/`, `provekit-groth16/`, `cairo-m/`, and `rookie-numbers/`, build from inside their own directories.
+    - Build the workspace once: `cargo build --release --workspace`. Rust crates with separate Cargo roots, such as `binius64/`, `flock/`, `miden/`, `provekit-groth16/`, `cairo-m/`, and `rookie-numbers/`, build from inside their own directories.
     - For Rust crates, run
 
     ```bash

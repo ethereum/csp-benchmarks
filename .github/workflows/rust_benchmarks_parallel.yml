@@ -238,6 +238,9 @@ jobs:
           if echo "$CRATES" | grep -q '"binius64"'; then
             cd binius64 && RUSTFLAGS="-C target-cpu=native" cargo build --release && cd ..
           fi
+          if echo "$CRATES" | grep -q '"flock"'; then
+            cd flock && cargo build --release && cd ..
+          fi
           if echo "$CRATES" | grep -q '"provekit-groth16"'; then
             cd provekit-groth16 && cargo build --release && cd ..
           fi

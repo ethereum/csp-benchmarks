@@ -3,14 +3,22 @@ name = "flock"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+resolver = "3"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
 [dependencies]
-anyhow = { workspace = true }
-bincode = { workspace = true }
-clap = { workspace = true }
-criterion = { workspace = true }
-flock-prover = { git = "https://github.com/succinctlabs/flock", rev = "4af7a4da3b60f2ac86ab9aaf2c6a4ff1de416b3a" }
-serde = { workspace = true }
-utils = { workspace = true }
+anyhow = "1.0"
+bincode = "1.3"
+clap = { version = "4.5", features = ["derive", "env"] }
+criterion = "0.5"
+flock-prover = { git = "https://github.com/succinctlabs/flock", rev = "b684b1258e4b1f202bec24afd660ace851b09e5e" }
+flock-hash = { git = "https://github.com/succinctlabs/flock", rev = "b684b1258e4b1f202bec24afd660ace851b09e5e" }
+serde = { version = "1.0", features = ["derive"] }
+utils = { path = "../utils" }
 
 [[bench]]
 name = "sha256"
@@ -20,10 +28,6 @@ harness = false
 name = "blake3"
 harness = false
 
-[[bench]]
-name = "keccak"
-harness = false
-
 [[bin]]
 name = "sha256_mem_flock"
 path = "src/bin/sha256_mem.rs"
@@ -31,7 +35,3 @@ path = "src/bin/sha256_mem.rs"
 [[bin]]
 name = "blake3_mem_flock"
 path = "src/bin/blake3_mem.rs"
-
-[[bin]]
-name = "keccak_mem_flock"
-path = "src/bin/keccak_mem.rs"
