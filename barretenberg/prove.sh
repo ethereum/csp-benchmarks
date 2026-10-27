@@ -11,11 +11,18 @@ set -euo pipefail
 
 : "${STATE_JSON:?STATE_JSON is required}"
 
-WORKSPACE_ROOT_PATH=$(jq -r '."workspace-root-path"' "$STATE_JSON")
-CIRCUIT_PATH=$(jq -r '."circuit-path"' "$STATE_JSON")
-TOML_PATH=$(jq -r '."toml-path"' "$STATE_JSON")
-BENCHMARK_NAME=$(jq -r '."benchmark-name"' "$STATE_JSON")
-INPUT_SIZE=$(jq -r '."input-size" // empty' "$STATE_JSON")
+# One `jq` for all five fields: this script is the timed region, so each
+# subprocess it spawns is charged to the proving time. `input-size` falls back
+# to the empty string rather than `empty` so that the field always occupies a
+# line and the reads stay aligned.
+{
+  read -r WORKSPACE_ROOT_PATH
+  read -r CIRCUIT_PATH
+  read -r TOML_PATH
+  read -r BENCHMARK_NAME
+  read -r INPUT_SIZE
+} < <(jq -r '."workspace-root-path", ."circuit-path", ."toml-path",
+             ."benchmark-name", (."input-size" // "")' "$STATE_JSON")
 
 cd "$WORKSPACE_ROOT_PATH"
 
