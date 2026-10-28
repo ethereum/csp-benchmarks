@@ -509,10 +509,13 @@ fn measure_ram(
     mem_bin_name_ref: &str,
     size: usize,
 ) {
-    compile_binary(mem_bin_name_ref);
-    let bin_path = format!("../target/release/{}", mem_bin_name_ref);
+    let bin_path = compile_binary(mem_bin_name_ref);
     let mem_json = mem_report_filename(target_str, size, system_str, cfg.feature);
-    run_measure_mem_script(&mem_json, &bin_path, size);
+    run_measure_mem_script(
+        &mem_json,
+        bin_path.to_str().expect("memory binary path must be UTF-8"),
+        size,
+    );
 }
 
 #[cfg(test)]

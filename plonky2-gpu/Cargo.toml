@@ -1,0 +1,46 @@
+[package]
+name = "plonky2_gpu_circuits"
+version = "0.1.0"
+edition = "2024"
+
+# Isolate the fork from the stock adapter's registry Plonky2 dependencies.
+[workspace]
+resolver = "3"
+
+[dependencies]
+plonky2 = { git = "https://github.com/robknight/plonky2", rev = "85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1", features = ["gpu"] }
+plonky2_u32 = { git = "https://github.com/robknight/plonky2-u32", rev = "80b832b5ebb9d2cb6fa259c5a1f99d8028f38683" }
+utils = { path = "../utils" }
+anyhow = "1.0"
+itertools = "0.13"
+log = "0.4"
+sha2 = "0.10"
+env_logger = "0.10"
+rand = "0.8"
+criterion = "0.5"
+clap = { version = "4.5", features = ["derive"] }
+num = "0.4"
+
+[[bench]]
+name = "sha256"
+harness = false
+
+[[bench]]
+name = "keccak"
+harness = false
+
+[[bench]]
+name = "poseidon"
+harness = false
+
+[[bin]]
+name = "sha256_mem_plonky2_gpu"
+path = "src/bin/sha256_mem.rs"
+
+[[bin]]
+name = "keccak_mem_plonky2_gpu"
+path = "src/bin/keccak_mem.rs"
+
+[[bin]]
+name = "poseidon_mem_plonky2_gpu"
+path = "src/bin/poseidon_mem.rs"

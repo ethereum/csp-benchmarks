@@ -16,6 +16,8 @@ members = [
     "utils",
 ]
 exclude = [
+    # The GPU fork has a separate dependency graph from stock Plonky2.
+    "plonky2-gpu",
     # Expander does not meet our soundness requirements: upstream Orion accepts
     # incomplete openings and samples queries before binding response rows.
     # M31Ext3 also has fewer than 96 bits before soundness losses.
