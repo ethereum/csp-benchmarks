@@ -3,20 +3,14 @@ name = "flock"
 version = "0.1.0"
 edition = "2024"
 
-[workspace]
-resolver = "3"
-
-[profile.release]
-lto = "thin"
-codegen-units = 1
-
 [dependencies]
 anyhow = "1.0"
 bincode = "1.3"
 clap = { version = "4.5", features = ["derive", "env"] }
 criterion = "0.5"
-flock-prover = { git = "https://github.com/succinctlabs/flock", rev = "b684b1258e4b1f202bec24afd660ace851b09e5e" }
-flock-hash = { git = "https://github.com/succinctlabs/flock", rev = "b684b1258e4b1f202bec24afd660ace851b09e5e" }
+# TODO: Return to succinctlabs/flock as soon as the upstream BLAKE3 dependency/feature conflict with ProveKit is resolved.
+flock-prover = { git = "https://github.com/Client-Side-Proving/flock", rev = "fd83f87b2a02878352ffa19023c36c108cbb97f2" }
+flock-hash = { git = "https://github.com/Client-Side-Proving/flock", rev = "fd83f87b2a02878352ffa19023c36c108cbb97f2" }
 serde = { version = "1.0", features = ["derive"] }
 utils = { path = "../utils" }
 

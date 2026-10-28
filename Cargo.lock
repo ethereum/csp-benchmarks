@@ -836,6 +836,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d62b7694a562cdf5a74227903507c56ab2cc8bdd1f781ed5cb4cf9c9f810bfc"
 
 [[package]]
+name = "array-util"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e509844de8f09b90a2c3444684a2b6695f4071360e13d2fda0af9f749cc2ed6"
+dependencies = [
+ "arrayvec",
+]
+
+[[package]]
 name = "arraydeque"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1142,13 +1151,362 @@ dependencies = [
  "bitflags 2.10.0",
  "cexpr",
  "clang-sys",
- "itertools 0.13.0",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "regex",
  "rustc-hash 2.1.3",
  "shlex",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "binius-circuits"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-core",
+ "binius-frontend",
+ "blake3 1.8.7",
+ "hex-literal 1.1.0",
+ "num-bigint 0.5.1",
+ "num-integer",
+ "rand 0.10.3",
+ "sha3 0.12.0",
+]
+
+[[package]]
+name = "binius-compute"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "rayon",
+]
+
+[[package]]
+name = "binius-core"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-field",
+ "binius-utils",
+ "bytemuck",
+ "bytes",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "binius-field"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-utils",
+ "bytemuck",
+ "cfg-if",
+ "derive_more 2.1.1",
+ "rand 0.10.3",
+ "seq-macro",
+]
+
+[[package]]
+name = "binius-frontend"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-compute",
+ "binius-core",
+ "binius-field",
+ "binius-utils",
+ "cranelift-entity",
+ "itertools 0.15.0",
+ "petgraph",
+ "rustc-hash 2.1.3",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "binius-hash"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-utils",
+ "blake3 1.8.7",
+ "bytemuck",
+ "bytes",
+ "digest 0.11.2",
+ "sha2 0.11.0",
+]
+
+[[package]]
+name = "binius-hash-prover"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-compute",
+ "binius-field",
+ "binius-hash",
+ "binius-utils",
+ "blake3 1.8.7",
+ "bytemuck",
+ "bytes",
+ "digest 0.11.2",
+ "itertools 0.15.0",
+ "rand 0.10.3",
+ "sha2 0.11.0",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "binius-iop"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-core",
+ "binius-field",
+ "binius-hash",
+ "binius-ip",
+ "binius-math",
+ "binius-transcript",
+ "binius-utils",
+ "digest 0.11.2",
+ "getset",
+ "itertools 0.15.0",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "binius-iop-prover"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-compute",
+ "binius-core",
+ "binius-field",
+ "binius-hash",
+ "binius-hash-prover",
+ "binius-iop",
+ "binius-ip",
+ "binius-ip-prover",
+ "binius-math",
+ "binius-transcript",
+ "binius-utils",
+ "digest 0.11.2",
+ "getset",
+ "itertools 0.15.0",
+ "rand 0.10.3",
+ "tracing",
+]
+
+[[package]]
+name = "binius-ip"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "array-util",
+ "binius-core",
+ "binius-field",
+ "binius-math",
+ "binius-transcript",
+ "itertools 0.15.0",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "binius-ip-prover"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "auto_impl",
+ "binius-compute",
+ "binius-core",
+ "binius-field",
+ "binius-ip",
+ "binius-math",
+ "binius-transcript",
+ "binius-utils",
+ "either",
+ "itertools 0.15.0",
+ "tracing",
+]
+
+[[package]]
+name = "binius-math"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-compute",
+ "binius-field",
+ "binius-utils",
+ "bytemuck",
+ "getset",
+ "itertools 0.15.0",
+ "rand 0.10.3",
+ "tracing",
+]
+
+[[package]]
+name = "binius-prover"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-compute",
+ "binius-core",
+ "binius-field",
+ "binius-hash",
+ "binius-hash-prover",
+ "binius-iop",
+ "binius-iop-prover",
+ "binius-ip",
+ "binius-ip-prover",
+ "binius-math",
+ "binius-spartan-frontend",
+ "binius-spartan-prover",
+ "binius-transcript",
+ "binius-utils",
+ "binius-verifier",
+ "bytemuck",
+ "bytes",
+ "digest 0.11.2",
+ "either",
+ "getset",
+ "itertools 0.15.0",
+ "rand 0.10.3",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "binius-spartan-frontend"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-field",
+ "binius-utils",
+ "bytemuck",
+ "smallvec",
+]
+
+[[package]]
+name = "binius-spartan-prover"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-compute",
+ "binius-core",
+ "binius-field",
+ "binius-hash",
+ "binius-hash-prover",
+ "binius-iop",
+ "binius-iop-prover",
+ "binius-ip",
+ "binius-ip-prover",
+ "binius-math",
+ "binius-spartan-frontend",
+ "binius-spartan-verifier",
+ "binius-transcript",
+ "binius-utils",
+ "digest 0.11.2",
+ "itertools 0.15.0",
+ "rand 0.10.3",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "binius-spartan-verifier"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-core",
+ "binius-field",
+ "binius-hash",
+ "binius-iop",
+ "binius-ip",
+ "binius-math",
+ "binius-spartan-frontend",
+ "binius-transcript",
+ "binius-utils",
+ "digest 0.11.2",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "binius-transcript"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "auto_impl",
+ "binius-field",
+ "binius-utils",
+ "bytes",
+ "digest 0.11.2",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "binius-utils"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "array-util",
+ "bytes",
+ "hybrid-array",
+ "rand 0.10.3",
+ "rayon",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "binius-verifier"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/binius64?rev=1bdf6a9206b0ece76b721cad72ab188a406e4b93#1bdf6a9206b0ece76b721cad72ab188a406e4b93"
+dependencies = [
+ "binius-core",
+ "binius-field",
+ "binius-hash",
+ "binius-iop",
+ "binius-ip",
+ "binius-math",
+ "binius-spartan-frontend",
+ "binius-spartan-verifier",
+ "binius-transcript",
+ "binius-utils",
+ "bytes",
+ "digest 0.11.2",
+ "getset",
+ "itertools 0.15.0",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "binius64"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "binius-circuits",
+ "binius-core",
+ "binius-frontend",
+ "binius-hash",
+ "binius-prover",
+ "binius-transcript",
+ "binius-utils",
+ "binius-verifier",
+ "blake3 1.8.3",
+ "clap",
+ "criterion",
+ "rand 0.10.3",
+ "sha2 0.10.9",
+ "sha3 0.12.0",
+ "tracing",
+ "tracing-profile",
+ "utils 0.1.0",
 ]
 
 [[package]]
@@ -1262,6 +1620,19 @@ dependencies = [
  "cpufeatures 0.2.17",
  "digest 0.10.7",
  "zeroize",
+]
+
+[[package]]
+name = "blake3"
+version = "1.8.7"
+source = "git+https://github.com/BLAKE3-team/BLAKE3?rev=f3149ec5bb5449af877ba20377a11008ff499fa2#f3149ec5bb5449af877ba20377a11008ff499fa2"
+dependencies = [
+ "arrayvec",
+ "cc",
+ "cfg-if",
+ "constant_time_eq",
+ "cpufeatures 0.3.0",
+ "digest 0.11.2",
 ]
 
 [[package]]
@@ -1604,7 +1975,7 @@ dependencies = [
  "ark-serialize 0.5.0",
  "ark-std 0.5.0",
  "byteorder",
- "hex-literal",
+ "hex-literal 0.4.1",
  "num",
  "num-bigint 0.4.6",
  "num-traits",
@@ -1987,6 +2358,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b2a41393f66f16b0823bb79094d54ac5fbd34ab292ddafb9a0456ac9f87d201"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "cranelift-bitset"
+version = "0.136.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa9f8cc1080739d5f72b4ee7e00aff7d589f1284beaf0a19472c07878be7f299"
+dependencies = [
+ "wasmtime-internal-core",
+]
+
+[[package]]
+name = "cranelift-entity"
+version = "0.136.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bca812b03a7b942796391f25bc02aa70a1a007fee3ce2756490c788429e9c39"
+dependencies = [
+ "cranelift-bitset",
+ "wasmtime-internal-core",
 ]
 
 [[package]]
@@ -3117,6 +3507,114 @@ dependencies = [
 ]
 
 [[package]]
+name = "flock"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bincode 1.3.3",
+ "clap",
+ "criterion",
+ "flock-hash",
+ "flock-prover",
+ "serde",
+ "utils 0.1.0",
+]
+
+[[package]]
+name = "flock-core"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/flock?rev=fd83f87b2a02878352ffa19023c36c108cbb97f2#fd83f87b2a02878352ffa19023c36c108cbb97f2"
+dependencies = [
+ "bincode 1.3.3",
+ "blake3 1.8.7",
+ "flock-field",
+ "flock-hash",
+ "flock-merkle",
+ "flock-multilinear",
+ "flock-parallel",
+ "flock-transcript",
+ "rand_core 0.9.5",
+ "rayon",
+ "serde",
+ "sha2 0.10.9",
+ "toml",
+]
+
+[[package]]
+name = "flock-field"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/flock?rev=fd83f87b2a02878352ffa19023c36c108cbb97f2#fd83f87b2a02878352ffa19023c36c108cbb97f2"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "flock-hash"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/flock?rev=fd83f87b2a02878352ffa19023c36c108cbb97f2#fd83f87b2a02878352ffa19023c36c108cbb97f2"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "flock-merkle"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/flock?rev=fd83f87b2a02878352ffa19023c36c108cbb97f2#fd83f87b2a02878352ffa19023c36c108cbb97f2"
+dependencies = [
+ "blake3 1.8.7",
+ "flock-hash",
+ "flock-parallel",
+ "rayon",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "flock-multilinear"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/flock?rev=fd83f87b2a02878352ffa19023c36c108cbb97f2#fd83f87b2a02878352ffa19023c36c108cbb97f2"
+dependencies = [
+ "rayon",
+]
+
+[[package]]
+name = "flock-parallel"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/flock?rev=fd83f87b2a02878352ffa19023c36c108cbb97f2#fd83f87b2a02878352ffa19023c36c108cbb97f2"
+dependencies = [
+ "rayon",
+]
+
+[[package]]
+name = "flock-prover"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/flock?rev=fd83f87b2a02878352ffa19023c36c108cbb97f2#fd83f87b2a02878352ffa19023c36c108cbb97f2"
+dependencies = [
+ "bincode 1.3.3",
+ "blake3 1.8.7",
+ "flock-core",
+ "flock-field",
+ "flock-hash",
+ "flock-merkle",
+ "flock-multilinear",
+ "flock-transcript",
+ "rayon",
+ "serde",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "flock-transcript"
+version = "0.1.0"
+source = "git+https://github.com/Client-Side-Proving/flock?rev=fd83f87b2a02878352ffa19023c36c108cbb97f2#fd83f87b2a02878352ffa19023c36c108cbb97f2"
+dependencies = [
+ "blake3 1.8.7",
+ "flock-field",
+ "flock-hash",
+ "rayon",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3730,9 +4228,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
 dependencies = [
  "allocator-api2",
- "equivalent",
  "foldhash 0.1.5",
- "serde",
 ]
 
 [[package]]
@@ -3744,6 +4240,8 @@ dependencies = [
  "allocator-api2",
  "equivalent",
  "foldhash 0.2.0",
+ "serde",
+ "serde_core",
 ]
 
 [[package]]
@@ -3825,6 +4323,12 @@ name = "hex-literal"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
+
+[[package]]
+name = "hex-literal"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e712f64ec3850b98572bffac52e2c6f282b29fe6c5fa6d42334b30be438d95c1"
 
 [[package]]
 name = "hmac"
@@ -5176,6 +5680,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "linear-map"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bfae20f6b19ad527b550c223fddc3077a547fc70cda94b9b566575423fd303ee"
+
+[[package]]
 name = "link-section"
 version = "0.19.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5499,6 +6009,18 @@ dependencies = [
  "cfg-if",
  "libc",
  "memoffset 0.6.5",
+]
+
+[[package]]
+name = "nix"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
+dependencies = [
+ "bitflags 2.10.0",
+ "cfg-if",
+ "cfg_aliases",
+ "libc",
 ]
 
 [[package]]
@@ -7193,7 +7715,7 @@ checksum = "36fae7879976a7da05091f70da9652465b0dbba51adb8ae8e71731b1d47d047d"
 dependencies = [
  "ark-ff 0.6.0",
  "ark-serialize 0.6.0",
- "blake3",
+ "blake3 1.8.3",
  "digest 0.10.7",
  "keccak 0.1.5",
  "p3-koala-bear 0.4.2",
@@ -7209,7 +7731,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2482a98b65f7545992cc59f92d0e439c9ec0fcbc53e262c3be81d57bf9b33c0"
 dependencies = [
- "blake3",
+ "blake3 1.8.3",
  "bytemuck",
  "keccak 0.1.5",
  "provekit-spongefish",
@@ -7241,14 +7763,14 @@ dependencies = [
  "ark-serialize 0.6.0",
  "ark-std 0.6.0",
  "arrayvec",
- "blake3",
+ "blake3 1.8.3",
  "ciborium",
  "clap",
  "const-oid 0.9.6",
  "derive-where",
  "digest 0.10.7",
  "hex",
- "hex-literal",
+ "hex-literal 0.4.1",
  "itertools 0.14.0",
  "ordered-float",
  "provekit-spongefish",
@@ -7310,7 +7832,7 @@ checksum = "eaf5adde013ceac9f37a48896e8c49d340744fef3ddf2b1ece567e793a8e5022"
 dependencies = [
  "aes",
  "blake2 0.11.0-rc.6",
- "blake3",
+ "blake3 1.8.3",
  "cbc",
  "k256 0.14.0-rc.11",
  "keccak 0.2.2",
@@ -8124,7 +8646,7 @@ dependencies = [
  "cfg-if",
  "digest 0.10.7",
  "hex",
- "hex-literal",
+ "hex-literal 0.4.1",
  "metal",
  "paste",
  "rand_core 0.9.5",
@@ -8810,6 +9332,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "seq-macro"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bc711410fbe7399f390ca1c3b60ad0f53f80e95c5eb935e52268a0e2cd49acc"
+
+[[package]]
 name = "serde"
 version = "1.0.228"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9075,6 +9603,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "sha3"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc9bad02c26382724b2d2692c6f179285e4b54eeecd7968f52a50059c3c11759"
+dependencies = [
+ "digest 0.11.2",
+ "keccak 0.2.2",
+ "sponge-cursor",
+]
+
+[[package]]
 name = "sharded-slab"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9091,7 +9630,7 @@ checksum = "ba8593196da75d9dc4f69349682bd4c2099f8cde114257d1ef7ef1b33d1aba54"
 dependencies = [
  "cfg-if",
  "libc",
- "nix",
+ "nix 0.23.2",
  "rand 0.8.5",
  "win-sys",
 ]
@@ -9369,6 +9908,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "sponge-cursor"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a0219bd7d979d58245a4f41f695e1ac9f8befdffadd7f61f1bae9e39abc6620"
+
+[[package]]
 name = "spongefish"
 version = "0.7.0"
 source = "git+https://github.com/arkworks-rs/spongefish?rev=d2d190b1329d35ac9577438d05aed4f17a57b9f9#d2d190b1329d35ac9577438d05aed4f17a57b9f9"
@@ -9570,13 +10115,13 @@ version = "2.2.0"
 source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
  "blake2 0.10.6",
- "blake3",
+ "blake3 1.8.3",
  "bytemuck",
  "cfg-if",
  "dashmap",
  "educe 0.5.11",
  "fnv",
- "hashbrown 0.15.5",
+ "hashbrown 0.17.1",
  "hex",
  "indexmap 2.14.2",
  "itertools 0.13.0",
@@ -9597,7 +10142,7 @@ name = "stwo-constraint-framework"
 version = "2.2.0"
 source = "git+https://github.com/ClementWalter/stark-v?rev=d478f783055aa0d73a93768a433a3c6c31c91d1c#d478f783055aa0d73a93768a433a3c6c31c91d1c"
 dependencies = [
- "hashbrown 0.15.5",
+ "hashbrown 0.17.1",
  "itertools 0.13.0",
  "num-traits",
  "rand 0.8.5",
@@ -10211,6 +10756,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-profile"
+version = "0.10.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c509ff1014226f573c309a63a856b6d4515c993880ba57d20ae56f402698da88"
+dependencies = [
+ "cfg-if",
+ "linear-map",
+ "nix 0.29.0",
+ "thiserror 2.0.18",
+ "tracing",
+ "tracing-subscriber 0.3.23",
+]
+
+[[package]]
 name = "tracing-serde"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10466,7 +11025,7 @@ dependencies = [
  "ark-bn254 0.5.0",
  "ark-ff 0.5.0",
  "bincode 1.3.3",
- "blake3",
+ "blake3 1.8.3",
  "chrono",
  "clap",
  "criterion",
@@ -10741,6 +11300,16 @@ dependencies = [
  "hashbrown 0.15.5",
  "indexmap 2.14.2",
  "semver 1.0.27",
+]
+
+[[package]]
+name = "wasmtime-internal-core"
+version = "49.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "947a732ad659f42c10ec639706fc8cb1f068dd9a55eebde8a1f24dfd06dfa525"
+dependencies = [
+ "hashbrown 0.17.1",
+ "libm",
 ]
 
 [[package]]

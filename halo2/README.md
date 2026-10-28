@@ -4,22 +4,11 @@ The circuits come from Axiom's [`zkevm-hashes`](https://github.com/axiom-crypto/
 
 Proofs use Halo2's KZG backend over BN254 with SHPLONK multi-open and Blake2b for Fiat-Shamir, matching the upstream tests.
 
-> [!NOTE]
-> The git dependencies must stay on `branch = "develop"` and must not be pinned to a `rev`.
-> `zkevm-hashes` pulls in snark-verifier, which depends on `halo2-base` via that same branch;
-> Cargo keys a git source on the ref you name, so a `rev` produces two copies of `halo2-base`
-> and the build fails on an `OptimizedPoseidonSpec` type mismatch. Upstream reconciles this
-> with a `[patch]` table, which Cargo only honours from the root manifest of a build and so
-> does not reach us. The commit is still pinned, by `Cargo.lock`.
+The Axiom git dependencies use `branch = "develop"` so direct and transitive dependencies share the same `halo2-base` source. `Cargo.lock` pins their commits.
 
 ## Prerequisites
 
-Use the same toolchain as `.github/workflows/rust_benchmarks_parallel.yml`:
-
-```bash
-rustup toolchain install nightly-2026-03-04 --component llvm-tools rustc-dev
-rustup override set nightly-2026-03-04
-```
+Use the [pinned Rust toolchain](../rust-toolchain.toml).
 
 ## Benchmarking
 

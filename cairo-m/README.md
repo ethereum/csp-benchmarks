@@ -4,22 +4,32 @@ This benchmark code is from: https://github.com/kkrt-labs/zkvm-benchmarks/tree/m
 
 ## Prerequisites
 
-Follow the same toolchain setup that CI applies in `.github/workflows/rust_benchmarks_parallel.yml`:
+Use the [pinned Rust toolchain](rust-toolchain.toml). On macOS, install LLVM:
 
 ```bash
-brew install llvm lld
-export CC=/opt/homebrew/opt/llvm/bin/clang
-export CXX=/opt/homebrew/opt/llvm/bin/clang++
-export AR=/opt/homebrew/opt/llvm/bin/llvm-ar
-export RANLIB=/opt/homebrew/opt/llvm/bin/llvm-ranlib
+brew install llvm
+```
 
-rustup toolchain install nightly-2025-04-06-aarch64-apple-darwin \
-  --component llvm-tools rustc-dev rust-src
-rustup override set nightly-2025-04-06-aarch64-apple-darwin
+The [LLVM wrapper](../.github/actions/install-llvm/with-llvm.sh) sets the Homebrew compiler tools and macOS SDK for each command. Compiler flags are defined in the [Cargo configuration](.cargo/config.toml). On other platforms, install LLD and run the Cargo commands below without the wrapper.
+
+## Build and lint
+
+From the repository root on macOS:
+
+```bash
+cd cairo-m
+../.github/actions/install-llvm/with-llvm.sh cargo build
+../.github/actions/install-llvm/with-llvm.sh cargo clippy --all-targets --all-features
 ```
 
 ## Run the benchmark
 
+From the repository root on macOS, build the memory binary and copy it to the shared target directory used by the benchmark harness:
+
 ```bash
-RUSTFLAGS="-C link-arg=-fuse-ld=lld -C target-cpu=native" cargo bench
+cd cairo-m
+../.github/actions/install-llvm/with-llvm.sh cargo build --release --bin sha256_mem_cairo_m
+mkdir -p ../target/release
+cp target/release/sha256_mem_cairo_m ../target/release/
+BENCH_INPUT_PROFILE=reduced ../.github/actions/install-llvm/with-llvm.sh cargo bench --bench sha256_bench
 ```

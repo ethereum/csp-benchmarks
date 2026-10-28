@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PATH="${CARGO_HOME:-$HOME/.cargo}/bin:$PATH"
+
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 if [[ -z "$repo_root" || ! -f "$repo_root/.codex/hooks.json" ]]; then
   exit 0

@@ -12,7 +12,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  EXCLUDED_CRATES: "binius64 flock miden provekit-groth16 cairo-m"
+  EXCLUDED_CRATES: "miden provekit-groth16 cairo-m"
   GITHUB_TOKEN: ${{ secrets.GH_PAT || github.token }}
 
 # ────────────────── 1. Warm‑up build ──────────────────
@@ -32,7 +32,6 @@ jobs:
             ~/.cargo/git/db
             ~/.rustup
             target
-            binius64/target
             miden/target
             cairo-m/target
             rookie-numbers/target
@@ -43,13 +42,13 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2026-03-04
+          toolchain: nightly-2026-03-14
           override: true
           profile: default
           default: true
           components: rustfmt, clippy
 
-      - name: Install Binius toolchain
+      - name: Install Miden toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: 1.98.1
@@ -64,7 +63,7 @@ jobs:
           components: llvm-tools, rustc-dev, rust-src, rustfmt, clippy
 
       - name: Install RISC-V target for Stark-V
-        run: rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-04
+        run: rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-14
 
       - name: Install OpenMPI
         uses: ./.github/actions/install-ompi

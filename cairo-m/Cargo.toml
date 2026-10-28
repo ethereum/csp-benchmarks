@@ -10,10 +10,10 @@ serde_json = { version = "1.0" }
 utils = { path = "../utils" }
 
 # Cairo
-cairo-m-common = { git = "https://github.com/kkrt-labs/cairo-m", rev = "79c1b1e" }
-cairo-m-runner = { git = "https://github.com/kkrt-labs/cairo-m", rev = "79c1b1e" }
-cairo-m-prover = { git = "https://github.com/kkrt-labs/cairo-m", rev = "79c1b1e" }
-cairo-m-compiler = { git = "https://github.com/kkrt-labs/cairo-m", rev = "79c1b1e" }
+cairo-m-common = { git = "https://github.com/kkrt-labs/cairo-m", rev = "79c1b1e83f7b959babe3c991eca0902954a31385" }
+cairo-m-runner = { git = "https://github.com/kkrt-labs/cairo-m", rev = "79c1b1e83f7b959babe3c991eca0902954a31385" }
+cairo-m-prover = { git = "https://github.com/kkrt-labs/cairo-m", rev = "79c1b1e83f7b959babe3c991eca0902954a31385" }
+cairo-m-compiler = { git = "https://github.com/kkrt-labs/cairo-m", rev = "79c1b1e83f7b959babe3c991eca0902954a31385" }
 stwo-prover = { git = "https://github.com/starkware-libs/stwo", features = ["parallel"], rev = "ab57a1c" }
 
 [dev-dependencies]

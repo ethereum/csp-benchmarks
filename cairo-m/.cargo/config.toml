@@ -1,2 +1,6 @@
 [build]
 rustflags = ["-C", "link-arg=-fuse-ld=lld", "-C", "target-cpu=native"]
+
+# Use Apple's linker for macOS SDKs and compact symbols for the Cairo-M compiler.
+[target.'cfg(target_os = "macos")']
+rustflags = ["-C", "target-cpu=native", "-C", "symbol-mangling-version=v0"]

@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
 members = [
+    "binius64",
+    "flock",
     "plonky2",
     "provekit",
     "polyhedra-expander",
@@ -14,12 +16,8 @@ members = [
     "utils",
 ]
 exclude = [
-    # Flock's transcript is incompatible with ProveKit's BLAKE3 traits-preview feature.
-    "flock",
     # Miden's BLAKE3 dependency conflicts with ProveKit's exact version.
     "miden",
-    # Binius64 uses its own Rust toolchain.
-    "binius64",
     # Groth16's Noir beta.19 pins keccak 0.2.0-rc.2; WHIR v1's beta.26
     # requires keccak 0.2 stable. Cargo cannot resolve both in one workspace.
     "provekit-groth16",

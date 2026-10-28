@@ -50,23 +50,13 @@ For the 2,048-byte Keccak setup, run SnarkJS with `NODE_OPTIONS=--max-old-space-
 
 ## Prerequisites
 
-Use the same toolchain as `.github/workflows/rust_benchmarks_parallel.yml`:
+Use the [pinned Rust toolchain](../rust-toolchain.toml).
 
-```bash
-rustup toolchain install nightly-2025-08-18-aarch64-apple-darwin \
-  --component llvm-tools rustc-dev
-rustup override set nightly-2025-08-18-aarch64-apple-darwin
-```
-
-The ECDSA circuit also needs [circom](https://github.com/iden3/circom) 2.2.3 on PATH. Its witness
-generator is 57 MiB of generated C++ — roughly three times the largest artifact stored here — so
-`build.rs` compiles it from `ecdsa_32.circom` on demand rather than keeping it in the repo. Every
-other circuit ships its `.cpp` and `.dat` in tree and needs nothing installed. The first build
-after a clean checkout spends about five minutes in circom before the C++ compile starts.
+The ECDSA benchmarks require [Circom](https://github.com/iden3/circom) 2.2.3 on PATH. On a clean build, `build.rs` generates the secp256k1 and P-256 witness generators from their circuits.
 
 The secp256k1 circuit, `ecdsa_32`, uses complete group operations in its fake-GLV Straus table and accumulator, so doubling, inverse points, and infinity are handled rather than rejected. Circom 2.2.3 with `--O2` produces 279,647 nonlinear constraints and 20 public inputs. [secp256k1 validation](tests/SECP256K1.md) describes the caller preconditions and the focused R1CS regressions.
 
-The secp256r1 (P-256) ECDSA circuit, `ecdsa_p256_32`, is built the same way, so a clean build compiles both generators. Its complete group operations handle doubling, inverse points, and infinity throughout the Straus table and accumulator. Circom 2.2.3 with `--O2` produces 299,183 nonlinear constraints and 20 public inputs. [P-256 validation](tests/P256.md) describes the group operations, soundness argument, and focused R1CS regressions.
+The secp256r1 (P-256) ECDSA circuit, `ecdsa_p256_32`, uses complete group operations that handle doubling, inverse points, and infinity throughout the Straus table and accumulator. Circom 2.2.3 with `--O2` produces 299,183 nonlinear constraints and 20 public inputs. [P-256 validation](tests/P256.md) describes the group operations, soundness argument, and focused R1CS regressions.
 
 ## Run the benchmarks
 

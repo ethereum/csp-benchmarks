@@ -154,7 +154,6 @@ jobs:
             ~/.cargo/git/db
             ~/.rustup
             target
-            binius64/target
             miden/target
             cairo-m/target
             rookie-numbers/target
@@ -165,7 +164,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2026-03-04
+          toolchain: nightly-2026-03-14
           override: true
           profile: default
           default: true
@@ -192,7 +191,7 @@ jobs:
           profile: minimal
 
       - name: Install RISC-V target for Stark-V
-        run: rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-04
+        run: rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-14
 
       - name: Install OpenMPI for polyhedra-expander
         uses: ./.github/actions/install-ompi
@@ -235,12 +234,6 @@ jobs:
       - name: Build non-workspace crates separately
         run: |
           CRATES='${{ needs.detect-crates.outputs.crates }}'
-          if echo "$CRATES" | grep -q '"binius64"'; then
-            cd binius64 && RUSTFLAGS="-C target-cpu=native" cargo build --release && cd ..
-          fi
-          if echo "$CRATES" | grep -q '"flock"'; then
-            cd flock && cargo build --release && cd ..
-          fi
           if echo "$CRATES" | grep -q '"provekit-groth16"'; then
             cd provekit-groth16 && cargo build --release && cd ..
           fi
@@ -294,7 +287,6 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-            binius64/target
             miden/target
             cairo-m/target
             rookie-numbers/target
@@ -305,14 +297,14 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly-2026-03-04
+          toolchain: nightly-2026-03-14
           override: true
           profile: default
           default: true
           components: llvm-tools, rustc-dev
 
       - name: Install Rust 1.98.1
-        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'miden') }}
+        if: ${{ contains(matrix.crate, 'miden') }}
         uses: actions-rs/toolchain@v1
         with:
           toolchain: 1.98.1
@@ -359,7 +351,7 @@ jobs:
       - name: Install RISC-V target for stark-v
         if: ${{ contains(matrix.crate, 'stark-v') }}
         run: |
-          rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-04
+          rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-14
 
       - name: Install circom
         if: ${{ contains(matrix.crate, 'circom') }}
@@ -430,12 +422,10 @@ jobs:
           fi
 
       - name: Build and copy excluded memory benchmark binary to workspace target
-        if: ${{ contains(matrix.crate, 'binius64') || contains(matrix.crate, 'miden') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') }}
+        if: ${{ contains(matrix.crate, 'miden') || contains(matrix.crate, 'cairo-m') || contains(matrix.crate, 'rookie-numbers') }}
         run: |
           mkdir -p target/release
-          if [ "${{ matrix.crate }}" = "binius64" ]; then
-            cd binius64 && RUSTFLAGS="-C target-cpu=native" cargo build --release --bin sha256_mem_binius64 --bin keccak_mem_binius64 --bin blake3_mem_binius64 && cd ..
-          elif [ "${{ matrix.crate }}" = "miden" ]; then
+          if [ "${{ matrix.crate }}" = "miden" ]; then
             cd miden && cargo build --release --bin sha256_mem_miden --bin blake3_mem_miden --bin ecdsa_mem_miden && cd ..
             cp miden/target/release/sha256_mem_miden miden/target/release/blake3_mem_miden miden/target/release/ecdsa_mem_miden target/release/
           elif [ "${{ matrix.crate }}" = "cairo-m" ]; then
@@ -460,9 +450,6 @@ jobs:
           fi
           BENCHMARK_TARGET='${{ github.event.inputs.benchmark_target }}'
           export BENCH_INPUT_PROFILE="$PROFILE"
-          if [[ "${{ matrix.crate }}" == "binius64" ]]; then
-            export RUSTFLAGS="-C target-cpu=native"
-          fi
           echo "Using BENCH_INPUT_PROFILE=$BENCH_INPUT_PROFILE for ${{ matrix.crate }}"
           cd ${{ matrix.crate }}
           cargo_command=(cargo)

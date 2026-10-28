@@ -18,6 +18,14 @@ See `README.MD` for project overview and `CONTRIBUTING.md` for the full contribu
 - Explain mechanisms directly. Do not introduce an explanation by denying another interpretation unless the user raised it.
 - State observed results, supporting measurements, and remaining uncertainty directly. Do not invent reader interpretations or expectations to argue against.
 
+### GitHub pull requests and issue discussions
+
+- Read the relevant repository documentation, implementation, dependencies, and existing discussion before drafting a post. Investigate routine questions through source inspection and focused checks before asking maintainers to resolve them.
+- Take ownership of investigation and reasonable implementation choices within the agreed scope. When requesting maintainer input, state the specific unresolved blocker or design decision, what you checked or tried, and why their input is needed. Avoid repeated requests for direction on routine work.
+- Keep comments concise and constructive. Each reply should add new evidence, a concrete proposal, or a specific unresolved question. Do not restate documented behavior or settled decisions as new findings, missing documentation, or conventions that need to be established.
+- Keep PR descriptions proportional to the change: explain what changes, why it matters, and relevant validation. State what measurements actually cover, including workload and hardware. Keep development diaries and separate follow-up proposals out of the description; discuss separate work in the relevant issue.
+- Before submitting GitHub text, check its accuracy, relevance, tone, and concision. Remove repetition, unsupported claims, and unnecessary requests for direction.
+
 ## Rust benchmarks
 
 - **Workspace**: new system = new top-level crate + add it to `[workspace].members` in `Cargo.toml`.
@@ -27,17 +35,20 @@ See `README.MD` for project overview and `CONTRIBUTING.md` for the full contribu
 
 ### Quick commands
 
-Stark-V guest compilation uses the root `nightly-2026-03-04` toolchain and requires the RISC-V target. Install it with `rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-04`.
+Stark-V guest compilation uses the root `nightly-2026-03-14` toolchain and requires the RISC-V target. Install it with `rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-14`.
+
+Run workspace checks from the repository root:
 
 ```bash
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --all-features
-BENCH_INPUT_PROFILE=reduced cargo bench -p <crate>
 ```
+
+Run benchmarks from their crate directories so Cargo loads `.cargo/config.toml`. Follow the setup and commands in each crate's README, and use `BENCH_INPUT_PROFILE=reduced` for iteration.
 
 ### Gotcha: excluded crates
 
-`binius64/`, `flock/`, `miden/`, `provekit-groth16/`, `cairo-m/`, and `rookie-numbers/` are excluded from the workspace. If you touch them, build/lint from inside each directory.
+`miden/`, `provekit-groth16/`, `cairo-m/`, and `rookie-numbers/` are excluded from the workspace. If you touch them, build/lint from inside each directory.
 
 ## Non-Rust benchmarks
 
@@ -77,16 +88,8 @@ See `CONTRIBUTING.md` for comprehensive guidelines on adding benchmarks.
 Before reporting completion:
 
 1. Run `cargo build --workspace` successfully
-   - **Note**: Some crates (`binius64`, `flock`, `miden`, `provekit-groth16`, `cairo-m`, `rookie-numbers`) are excluded from the workspace. Build them separately:
-     ```bash
-     cd binius64 && cargo build && cd ..
-     cd flock && cargo build && cd ..
-     cd miden && cargo build && cd ..
-     cd provekit-groth16 && cargo build && cd ..
-     cd cairo-m && cargo build && cd ..
-     cd rookie-numbers && cargo build && cd ..
-     ```
+   - Build excluded crates separately using the setup and commands in each crate's README.
 2. Run `cargo clippy --workspace --all-targets --all-features` with no errors
-   - For excluded crates: `cd binius64 && cargo clippy --all-targets --all-features && cd ..` (and same for `flock`, `miden`, `provekit-groth16`, `cairo-m`, and `rookie-numbers`)
+   - Run Clippy for excluded crates using the setup documented in each crate's README.
 3. Run `cargo fmt --all -- --check`
 4. Test benchmark with `BENCH_INPUT_PROFILE=reduced`
