@@ -444,9 +444,11 @@ mod tests {
     fn stock_and_gpu_plonky2_keep_separate_audit_metadata() {
         use utils::harness::ProvingSystem;
 
-        let mut stock_properties = BenchProperties::default();
-        stock_properties.proving_system = Cow::Borrowed("Plonky2");
-        stock_properties.is_audited = AuditStatus::Audited;
+        let stock_properties = BenchProperties {
+            proving_system: Cow::Borrowed("Plonky2"),
+            is_audited: AuditStatus::Audited,
+            ..BenchProperties::default()
+        };
         let stock = Metrics::new(
             ProvingSystem::Plonky2.as_str().to_string(),
             None,
@@ -454,9 +456,11 @@ mod tests {
             128,
             stock_properties,
         );
-        let mut gpu_properties = BenchProperties::default();
-        gpu_properties.proving_system = Cow::Borrowed("Plonky2 GPU");
-        gpu_properties.is_audited = AuditStatus::NotAudited;
+        let gpu_properties = BenchProperties {
+            proving_system: Cow::Borrowed("Plonky2 GPU"),
+            is_audited: AuditStatus::NotAudited,
+            ..BenchProperties::default()
+        };
         let gpu = Metrics::new(
             ProvingSystem::Plonky2Gpu.as_str().to_string(),
             Some("gpu_executor".to_string()),
