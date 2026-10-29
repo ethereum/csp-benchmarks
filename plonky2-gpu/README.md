@@ -6,16 +6,16 @@ public digest checks and `standard_recursion_zk_config` directly via Rust path
 modules. ECDSA is not included in this variant.
 
 The stock `plonky2/` adapter retains its original dependencies and behavior.
-This crate is an excluded workspace because its Git fork must not replace the
-registry Plonky2 used by stock Plonky2 and other workspace members. All fork
-revisions are pinned in `Cargo.toml` and `Cargo.lock`; no local source overrides
-are required.
+This crate is a normal workspace member. Cargo keeps its pinned Git Plonky2
+and u32 packages separate from the registry packages used by stock Plonky2.
+Fork revisions are pinned in `Cargo.toml` and the root `Cargo.lock`; no local
+source overrides are required.
 
 ## Run
 
 Use the repository's canonical Rust toolchain and an available hardware GPU
 (Metal on macOS, or a supported Vulkan/DX12 adapter). Run from this directory so
-Cargo picks up `.cargo/config.toml` and the harness finds its memory script:
+the harness finds its memory script:
 
 ```sh
 cd plonky2-gpu

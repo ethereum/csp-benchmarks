@@ -3,10 +3,6 @@ name = "plonky2_gpu_circuits"
 version = "0.1.0"
 edition = "2024"
 
-# Isolate the fork from the stock adapter's registry Plonky2 dependencies.
-[workspace]
-resolver = "3"
-
 [dependencies]
 plonky2 = { git = "https://github.com/robknight/plonky2", rev = "85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1", features = ["gpu"] }
 plonky2_u32 = { git = "https://github.com/robknight/plonky2-u32", rev = "80b832b5ebb9d2cb6fa259c5a1f99d8028f38683" }

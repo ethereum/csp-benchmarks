@@ -1,3 +1,0 @@
-# The shared harness and CI collect binaries/results from the root target.
-[build]
-target-dir = "../target"

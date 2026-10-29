@@ -68,7 +68,7 @@ Notes:
 - `mobile/` – mobile benchmarks for Android and iOS.
 - `benchmark.sh` / `measure_mem_avg.sh` – orchestration scripts for non-Rust systems and RAM measurement.
 - `results/` – storage for published benchmark results.
-- The [`plonky2-gpu/`](plonky2-gpu/README.md) variant benchmarks the GPU fork with compiled witness generation, alongside the stock `plonky2/` adapter. It builds as a separate Cargo root.
+- The [`plonky2-gpu/`](plonky2-gpu/README.md) variant benchmarks the GPU fork with compiled witness generation, alongside the stock `plonky2/` adapter. It is built as a workspace member.
 - Rust proving system and zkVM crates such as `barretenberg/`, `binius64/`, `plonky2/`, `provekit/`, etc., each exposing a Criterion bench target registered through the shared harness. Some crates have separate Cargo roots and build from their own directories.
 - Non-Rust proving system folders such as `ligetron/` that contain the shell scripts required by `benchmark.sh`.
 
