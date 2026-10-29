@@ -25,10 +25,14 @@ BENCH_INPUT_PROFILE=reduced cargo bench --locked --bench poseidon
 ```
 
 Use `BENCH_INPUT_PROFILE=full` for all canonical input sizes. Results use the
-existing `plonky2` system identifier and the distinct `gpu_executor` feature tag,
-e.g. `sha256_128_plonky2_gpu_executor_metrics.json`. This feature tag does not
+`plonky2-gpu` system identifier and the `gpu_executor` feature tag,
+e.g. `sha256_128_plonky2-gpu_gpu_executor_metrics.json`. This feature tag does not
 use the `acceleration` field: Poseidon retains stock's `precompile` classification;
 SHA-256 and Keccak retain `None`.
+
+The separate system identifier lets the shared collector retain the fork's
+`not_audited` metadata alongside the stock implementation's audit status; feature
+tags alone do not separate system properties.
 
 GPU support is an unconditional dependency feature. The harness's plain
 `cargo build --release --bin ...` therefore builds the same GPU/executor memory

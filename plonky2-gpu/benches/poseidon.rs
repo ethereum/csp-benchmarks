@@ -6,7 +6,7 @@ use utils::harness::ProvingSystem;
 
 utils::define_benchmark_harness!(
     BenchTarget::Poseidon,
-    ProvingSystem::Plonky2,
+    ProvingSystem::Plonky2Gpu,
     Some(FEATURE),
     "poseidon_mem_plonky2_gpu",
     BENCH_PROPERTIES,
