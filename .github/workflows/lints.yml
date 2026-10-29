@@ -65,9 +65,6 @@ jobs:
       - name: Install RISC-V target for Stark-V
         run: rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-14
 
-      - name: Install OpenMPI
-        uses: ./.github/actions/install-ompi
-
       - name: Install LLVM and LLD for cairo-m
         uses: ./.github/actions/install-llvm
 

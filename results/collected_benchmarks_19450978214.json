@@ -270,7 +270,7 @@
     "pcs": "Orion",
     "arithm": "GKR",
     "is_zk": false,
-    "security_bits": 128,
+    "security_bits": 0,
     "is_pq": true,
     "is_maintained": true,
     "is_audited": "not_audited"
@@ -292,7 +292,7 @@
     "pcs": "Orion",
     "arithm": "GKR",
     "is_zk": false,
-    "security_bits": 128,
+    "security_bits": 0,
     "is_pq": true,
     "is_maintained": true,
     "is_audited": "not_audited"
@@ -314,7 +314,7 @@
     "pcs": "Orion",
     "arithm": "GKR",
     "is_zk": false,
-    "security_bits": 128,
+    "security_bits": 0,
     "is_pq": true,
     "is_maintained": true,
     "is_audited": "not_audited"
@@ -336,7 +336,7 @@
     "pcs": "Orion",
     "arithm": "GKR",
     "is_zk": false,
-    "security_bits": 128,
+    "security_bits": 0,
     "is_pq": true,
     "is_maintained": true,
     "is_audited": "not_audited"
@@ -358,7 +358,7 @@
     "pcs": "Orion",
     "arithm": "GKR",
     "is_zk": false,
-    "security_bits": 128,
+    "security_bits": 0,
     "is_pq": true,
     "is_maintained": true,
     "is_audited": "not_audited"

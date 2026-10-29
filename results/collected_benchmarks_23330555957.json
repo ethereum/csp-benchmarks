@@ -58,7 +58,7 @@
       "arithm": "GKR",
       "is_zk": false,
       "is_zkvm": false,
-      "security_bits": 128,
+      "security_bits": 0,
       "is_pq": true,
       "is_maintained": true,
       "is_audited": "not_audited"

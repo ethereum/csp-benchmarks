@@ -73,6 +73,7 @@ jobs:
           RUN_ALL="${{ github.event.inputs.run_all }}"
           BENCHMARK_CRATE='${{ github.event.inputs.benchmark_crate }}'
           BENCHMARK_TARGET='${{ github.event.inputs.benchmark_target }}'
+          EXCLUDE_REGEX='^(utils|mobile|zkvm|polyhedra-expander)(/|$)'
 
           if [[ -n "$BENCHMARK_TARGET" && -z "$BENCHMARK_CRATE" ]]; then
             echo "benchmark_target requires benchmark_crate" >&2
@@ -80,6 +81,10 @@ jobs:
           fi
 
           if [[ -n "$BENCHMARK_CRATE" ]]; then
+            if [[ "$BENCHMARK_CRATE" =~ $EXCLUDE_REGEX ]]; then
+              echo "Benchmark crate is disabled or excluded: $BENCHMARK_CRATE" >&2
+              exit 1
+            fi
             json=$(jq -cn --arg crate "$BENCHMARK_CRATE" '[$crate]')
             echo "benchmark_crate override active: ignoring run_all and diff detection"
             echo "Selected crate override: '$json'"
@@ -92,8 +97,6 @@ jobs:
           if [[ "$EVENT_NAME" == "push" ]]; then
             RUN_ALL="true"
           fi
-
-          EXCLUDE_REGEX='^(utils|mobile|zkvm)(/|$)'
 
           # ─── 1. discover Cargo.toml files ────────────────────────────────
           dirs=$(find . -mindepth 2 -maxdepth 4 -type f -name Cargo.toml \
@@ -192,9 +195,6 @@ jobs:
 
       - name: Install RISC-V target for Stark-V
         run: rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-14
-
-      - name: Install OpenMPI for polyhedra-expander
-        uses: ./.github/actions/install-ompi
 
       - name: Install RISC0 toolchain
         uses: ./.github/actions/install-risc0
@@ -331,10 +331,6 @@ jobs:
         uses: ./.github/actions/install-nargo
         with:
           version: ${{ matrix.crate == 'provekit' && '1.0.0-beta.26' || '1.0.0-beta.19' }}
-
-      - name: Install OpenMPI for polyhedra-expander
-        if: ${{ contains(matrix.crate, 'polyhedra-expander') }}
-        uses: ./.github/actions/install-ompi
 
       - name: Install RISC0 toolchain
         if: ${{ contains(matrix.crate, 'risc0') }}

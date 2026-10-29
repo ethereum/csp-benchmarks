@@ -5,7 +5,6 @@ members = [
     "flock",
     "plonky2",
     "provekit",
-    "polyhedra-expander",
     "circom",
     "halo2",
     "jolt",
@@ -16,6 +15,10 @@ members = [
     "utils",
 ]
 exclude = [
+    # Expander does not meet our soundness requirements: upstream Orion accepts
+    # incomplete openings and samples queries before binding response rows.
+    # M31Ext3 also has fewer than 96 bits before soundness losses.
+    "polyhedra-expander",
     # Miden's BLAKE3 dependency conflicts with ProveKit's exact version.
     "miden",
     # Groth16's Noir beta.19 pins keccak 0.2.0-rc.2; WHIR v1's beta.26

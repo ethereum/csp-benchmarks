@@ -60,19 +60,6 @@
       "is_maintained": true,
       "is_audited": "partially_audited"
     },
-    "expander": {
-      "proving_system": "Libra",
-      "field_curve": "M31",
-      "iop": "GKR",
-      "pcs": "Orion",
-      "arithm": "GKR",
-      "is_zk": false,
-      "is_zkvm": false,
-      "security_bits": 128,
-      "is_pq": true,
-      "is_maintained": true,
-      "is_audited": "not_audited"
-    },
     "jolt": {
       "proving_system": "Jolt",
       "field_curve": "Bn254",
@@ -713,116 +700,6 @@
       "preprocessing_size": 1074213,
       "num_constraints": 8981,
       "peak_memory": 168289894
-    },
-    {
-      "system": "expander",
-      "target": "poseidon",
-      "input_size": 12,
-      "proof_duration": 3976954,
-      "verify_duration": 12477617,
-      "proof_size": 572412,
-      "preprocessing_size": 373049,
-      "num_constraints": 17189,
-      "peak_memory": 40191590
-    },
-    {
-      "system": "expander",
-      "target": "poseidon",
-      "input_size": 16,
-      "proof_duration": 3907961,
-      "verify_duration": 12454420,
-      "proof_size": 572412,
-      "preprocessing_size": 379317,
-      "num_constraints": 17489,
-      "peak_memory": 38371328
-    },
-    {
-      "system": "expander",
-      "target": "poseidon",
-      "input_size": 2,
-      "proof_duration": 2877773,
-      "verify_duration": 10406180,
-      "proof_size": 540528,
-      "preprocessing_size": 48514,
-      "num_constraints": 8368,
-      "peak_memory": 26356940
-    },
-    {
-      "system": "expander",
-      "target": "poseidon",
-      "input_size": 4,
-      "proof_duration": 2851135,
-      "verify_duration": 10350372,
-      "proof_size": 540528,
-      "preprocessing_size": 47342,
-      "num_constraints": 8320,
-      "peak_memory": 27856076
-    },
-    {
-      "system": "expander",
-      "target": "poseidon",
-      "input_size": 8,
-      "proof_duration": 2820233,
-      "verify_duration": 10360095,
-      "proof_size": 540528,
-      "preprocessing_size": 51223,
-      "num_constraints": 8394,
-      "peak_memory": 28039577
-    },
-    {
-      "system": "expander",
-      "target": "sha256",
-      "input_size": 1024,
-      "proof_duration": 283290888,
-      "verify_duration": 508358813,
-      "proof_size": 3031956,
-      "preprocessing_size": 57726500,
-      "num_constraints": 2706904,
-      "peak_memory": 4068522393
-    },
-    {
-      "system": "expander",
-      "target": "sha256",
-      "input_size": 128,
-      "proof_duration": 45932825,
-      "verify_duration": 98043508,
-      "proof_size": 1957628,
-      "preprocessing_size": 9420474,
-      "num_constraints": 430854,
-      "peak_memory": 948702412
-    },
-    {
-      "system": "expander",
-      "target": "sha256",
-      "input_size": 2048,
-      "proof_duration": 541503950,
-      "verify_duration": 938491484,
-      "proof_size": 3208096,
-      "preprocessing_size": 112988418,
-      "num_constraints": 5310718,
-      "peak_memory": 7496292761
-    },
-    {
-      "system": "expander",
-      "target": "sha256",
-      "input_size": 256,
-      "proof_duration": 80572404,
-      "verify_duration": 155452225,
-      "proof_size": 2078172,
-      "preprocessing_size": 16315106,
-      "num_constraints": 755710,
-      "peak_memory": 1385370419
-    },
-    {
-      "system": "expander",
-      "target": "sha256",
-      "input_size": 512,
-      "proof_duration": 146539646,
-      "verify_duration": 278769208,
-      "proof_size": 2892980,
-      "preprocessing_size": 30104540,
-      "num_constraints": 1405424,
-      "peak_memory": 2177952972
     },
     {
       "system": "stark-v",
