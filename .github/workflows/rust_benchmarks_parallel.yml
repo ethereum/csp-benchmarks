@@ -450,6 +450,9 @@ jobs:
           fi
           BENCHMARK_TARGET='${{ github.event.inputs.benchmark_target }}'
           export BENCH_INPUT_PROFILE="$PROFILE"
+          if [[ "${{ matrix.crate }}" == "jolt" ]]; then
+            export RUST_MIN_STACK=134217728
+          fi
           echo "Using BENCH_INPUT_PROFILE=$BENCH_INPUT_PROFILE for ${{ matrix.crate }}"
           cd ${{ matrix.crate }}
           cargo_command=(cargo)
