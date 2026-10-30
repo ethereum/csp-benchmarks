@@ -2,6 +2,7 @@ mod artifacts;
 mod comb_witness;
 mod ecdsa_hints;
 mod ecdsa_input;
+mod parameters;
 mod poseidon;
 
 use std::{borrow::Cow, cell::RefCell, rc::Rc};
@@ -13,7 +14,7 @@ use sha3::Keccak256;
 use spartan_whir::{
     DEFAULT_ZK_ELL, DEFAULT_ZK_MASK_LOG_INV_RATE, MatrixClosingMode, PoseidonZkProof,
     PoseidonZkProvingKey, PoseidonZkSetupConfig, PoseidonZkVerifyingKey, QuinticExtension,
-    SecurityConfig, SoundnessAssumption, engine::F, recommended_quintic_zk_whir_params,
+    SecurityConfig, SoundnessAssumption, engine::F,
 };
 use utils::harness::{AuditStatus, BenchProperties};
 
@@ -98,7 +99,15 @@ fn setup(target: Target, input_size: usize) -> Circuit {
     let num_cons = shape.num_cons;
     let num_vars = shape.num_vars;
     let num_io = shape.num_io;
-    let num_variables = num_vars.next_power_of_two().ilog2() as usize;
+    let num_variables = num_vars
+        .max(num_io.checked_add(1).expect("public input count overflow"))
+        .checked_next_power_of_two()
+        .expect("padded witness size overflow")
+        .ilog2() as usize;
+    let num_outer_rounds = num_cons
+        .checked_next_power_of_two()
+        .expect("padded constraint count overflow")
+        .ilog2() as usize;
     #[cfg(test)]
     let validation_shape = shape.clone();
     let config = PoseidonZkSetupConfig {
@@ -108,7 +117,7 @@ fn setup(target: Target, input_size: usize) -> Circuit {
             merkle_security_bits: SECURITY_BITS,
             soundness_assumption: SoundnessAssumption::JohnsonBound,
         },
-        whir_params: recommended_quintic_zk_whir_params(num_variables),
+        whir_params: parameters::for_dimensions(num_variables, num_outer_rounds),
         spark_whir_params: None,
         ell_zk: DEFAULT_ZK_ELL,
         mask_log_inv_rate: DEFAULT_ZK_MASK_LOG_INV_RATE,
@@ -251,6 +260,25 @@ mod tests {
     use super::*;
     use spartan_whir::validate_satisfaction;
 
+    fn assert_selected_parameters(prepared: &Prepared) {
+        let domain = prepared.circuit.proving_key.domain_separator();
+        let expected = parameters::for_dimensions(
+            domain.num_vars.ilog2() as usize,
+            domain.num_cons.ilog2() as usize,
+        );
+        for domain in [domain, prepared.circuit.verifying_key.domain_separator()] {
+            assert_eq!(domain.whir_params, expected);
+            assert_eq!(domain.security_level_bits, SECURITY_BITS);
+            assert_eq!(domain.merkle_security_bits, SECURITY_BITS);
+            assert_eq!(
+                domain.soundness_assumption,
+                SoundnessAssumption::JohnsonBound
+            );
+            assert_eq!(domain.matrix_closing, MatrixClosingMode::DirectSparse);
+            assert!(domain.spark_whir_params.is_none());
+        }
+    }
+
     #[test]
     #[ignore = "requires the KoalaBear Circom compiler and native C++ headers"]
     fn hash_circuits_match_native_hashes() {
@@ -291,6 +319,7 @@ mod tests {
         for target in [Target::Sha256, Target::Keccak] {
             for size in utils::metadata::selected_byte_inputs() {
                 let prepared = prepare(target, size);
+                assert_selected_parameters(&prepared);
                 let proof = prove(&prepared);
                 verify(&prepared, &proof);
                 assert_eq!(
@@ -315,6 +344,7 @@ mod tests {
     fn poseidon_circuits_match_native_hashes_and_prove() {
         for size in utils::metadata::selected_field_element_inputs() {
             let prepared = prepare(Target::Poseidon, size);
+            assert_selected_parameters(&prepared);
             let artifacts = &prepared.circuit.artifacts;
             let (witness, public_inputs) = artifacts
                 .generator
@@ -345,6 +375,7 @@ mod tests {
     fn ecdsa_proofs_bind_the_message_and_public_key() {
         for target in [Target::Ecdsa, Target::EcdsaP256] {
             let prepared = prepare(target, 32);
+            assert_selected_parameters(&prepared);
             let artifacts = &prepared.circuit.artifacts;
             let (witness, public_inputs) = artifacts
                 .generator

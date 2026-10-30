@@ -2,7 +2,7 @@
 
 This crate benchmarks [Spartan-WHIR](https://github.com/ethereum/spartan-whir) at revision [`14d6da4`](https://github.com/ethereum/spartan-whir/commit/14d6da4211eda59e65cfd0af5e2dcd89d523edc3). It proves SHA-256, Keccak-256, native KoalaBear Poseidon, and ECDSA circuits with full-ZK DirectSparse, a quintic extension, Poseidon2 proof hashing, and a 115-bit security target under the Johnson bound. Upstream setup checks the composed security budget for each circuit.
 
-The 115-bit setting is the highest common composed target for the selected upstream schedules over the supported circuit dimensions. The limiting term combines Poseidon commitment binding events; the upstream budget allocates error across algebraic checks, WHIR arguments, and commitments. Individual small circuits can attain a higher target; all measurements use one security setting, matching the system-wide metadata.
+Every circuit uses the same 115-bit composed security target. Upstream setup allocates the error budget across algebraic checks, WHIR arguments, and Poseidon commitment binding events using the actual circuit dimensions and selected parameters.
 
 ## Prerequisites
 
@@ -33,14 +33,36 @@ On Debian or Ubuntu, install `g++`, `libgmp-dev`, and `nlohmann-json3-dev`.
 
 ## Run
 
-From the repository root:
+Run from this crate directory so the shared harness resolves its memory binaries and measurement script:
 
 ```bash
-BENCH_INPUT_PROFILE=reduced cargo bench -p spartan-whir-bench
-BENCH_INPUT_PROFILE=full cargo bench -p spartan-whir-bench
+cd spartan-whir
+BENCH_INPUT_PROFILE=reduced RUSTFLAGS="-C target-cpu=native" cargo bench
+BENCH_INPUT_PROFILE=full RUSTFLAGS="-C target-cpu=native" cargo bench
 ```
 
 Select an individual target with `--bench sha256_bench`, `--bench keccak_bench`, `--bench poseidon_bench`, `--bench ecdsa_bench`, or `--bench ecdsa_p256_bench`. The shared harness records timings, proof and preprocessing sizes, constraint counts, and proving memory through dedicated memory binaries. Running `cargo bench` from this directory selects this benchmark crate.
+
+## WHIR parameters
+
+[parameters.rs](src/parameters.rs) selects a measured configuration from the logarithms of the padded witness length and constraint count. Every supported circuit has equal witness and constraint logarithms. The table covers all SHA-256, Keccak, Poseidon, and ECDSA inputs in both input profiles. Setup rejects dimensions outside this table. These explicit parameters apply to the pinned upstream revision.
+
+| Log₂ dimension | Variables folded per step | Initial log₂ inverse rate | Initial reduction parameter | PoW budget (bits) | Explicit round log₂ inverse rates |
+| ---: | --- | ---: | ---: | ---: | --- |
+| 9 | 3 | 4 | 1 | 0 | Derived |
+| 10 | 4 | 4 | 1 | 1 | Derived |
+| 16 | 6, 4 | 1 | 3 | 1 | Derived |
+| 17 | 7, 4 | 1 | 4 | 1 | Derived |
+| 18 | 8, 4 | 1 | 5 | 1 | Derived |
+| 19 | 8, 5 | 1 | 7 | 4 | 4 |
+| 20 | 8, 6 | 1 | 6 | 4 | 4 |
+| 21 | 8, 4, 4 | 1 | 7 | 4 | Derived |
+
+The PoW budget is an upper bound used to derive query counts and actual grinding difficulty. Every configuration retains full-ZK DirectSparse, the quintic extension, Poseidon2 proof hashing, the Johnson bound, `ell_zk=3`, `mask_log_inv_rate=3`, and the 115-bit application and Merkle targets. Key setup checks the composed security budget and full-ZK masking capacity for each actual circuit.
+
+Explicit round rates determine the backend's domain changes. At dimensions 19 and 20, the explicit rate of four gives an actual first-round reduction of five; the table records the separate `rs_domain_initial_reduction_factor` parameter exactly as measured.
+
+Configurations were selected using Criterion proving times and fresh-process peak RAM on an Apple M4 Pro. Selection favors lower RAM when timing confidence intervals overlap.
 
 ## Circuits
 
