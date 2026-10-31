@@ -854,6 +854,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "barretenberg-bench"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "barretenberg-rs",
+ "base64 0.22.1",
+ "clap",
+ "criterion",
+ "flate2",
+ "serde_json",
+ "utils",
+]
+
+[[package]]
+name = "barretenberg-rs"
+version = "5.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f457c7c80c23f6d6da260ee3af089a32bb9682e434fa658e4a544deca854cf21"
+dependencies = [
+ "hex",
+ "libc",
+ "nix 0.27.1",
+ "rmp",
+ "rmp-serde",
+ "rmpv",
+ "serde",
+ "thiserror 1.0.69",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "base16ct"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5194,6 +5226,18 @@ dependencies = [
 
 [[package]]
 name = "nix"
+version = "0.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb04e9c688eff1c89d72b407f168cf79bb9e867a9d3323ed6c01519eb9cc053"
+dependencies = [
+ "bitflags 2.10.0",
+ "cfg-if",
+ "libc",
+ "memoffset",
+]
+
+[[package]]
+name = "nix"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
@@ -7808,6 +7852,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rmpv"
+version = "1.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a4e1d4b9b938a26d2996af33229f0ca0956c652c1375067f0b45291c1df8417"
+dependencies = [
+ "rmp",
+]
+
+[[package]]
 name = "rrs-lib"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8549,6 +8602,16 @@ name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
+
+[[package]]
+name = "signal-hook-registry"
+version = "1.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b"
+dependencies = [
+ "errno",
+ "libc",
+]
 
 [[package]]
 name = "signature"
@@ -9347,9 +9410,23 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
+ "parking_lot",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
+ "tokio-macros",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78773a2a397f451582ce068015985c33193cf6dea8b74d2a639fe457b2f07b0e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 3.0.6",
 ]
 
 [[package]]
@@ -9563,7 +9640,7 @@ checksum = "c509ff1014226f573c309a63a856b6d4515c993880ba57d20ae56f402698da88"
 dependencies = [
  "cfg-if",
  "linear-map",
- "nix",
+ "nix 0.29.0",
  "thiserror 2.0.18",
  "tracing",
  "tracing-subscriber 0.3.23",

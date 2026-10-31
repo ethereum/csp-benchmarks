@@ -72,7 +72,6 @@ jobs:
           # ─── 1. list of top‑level folders to watch ────────────
           FOLDERS=(
             ligetron
-            barretenberg
           )
 
           # ─── 2. filter by diff (or include all when run_all=true) ───────
@@ -130,16 +129,6 @@ jobs:
       - name: Build Ligetron benchmark programs
         if: ${{ matrix.folder == 'ligetron' }}
         run: bash ./ligetron/build_programs.sh
-
-      - name: Setup Nargo (only when folder is barretenberg)
-        if: ${{ matrix.folder == 'barretenberg' }}
-        uses: ./.github/actions/install-nargo
-        with:
-          version: "1.0.0-beta.25"
-
-      - name: Setup Barretenberg (only when folder is barretenberg)
-        if: ${{ matrix.folder == 'barretenberg' }}
-        uses: ./.github/actions/install-bb
 
       - name: Ensure jq present
         run: |

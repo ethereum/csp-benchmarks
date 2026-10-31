@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
-set -u
+set -euo pipefail
 
 # ================================
 # Noir macOS end-to-end setup
 # ================================
 # - Installs Nargo
 # - Installs Barretenberg(bbup)
-# - Runs test prover & verifier
+# - Runs benchmarks
 #
 
 ### Helpers
 step() { printf "\n\033[1;34m==> %s\033[0m\n" "$*"; }
 ok()   { printf "\033[1;32m✓ %s\033[0m\n" "$*"; }
-warn() { printf "\033[1;33m! %s\033[0m\n" "$*"; }
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "This script is for macOS (Darwin) only."; exit 1
@@ -24,24 +23,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Install Nargo
 # -----------------------
 
+export PATH="$HOME/.nargo/bin:$PATH"
 if command -v noirup >/dev/null 2>&1; then
     echo "Nargo is already installed."
 else
     step "Installing Nargo"
-    curl -L https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
-    # Safe check for ZSH_VERSION or BASH_VERSION
-    if [ -n "${ZSH_VERSION-}" ]; then
-        # We are in zsh
-        [ -f "${HOME}/.zshrc" ] && source "${HOME}/.zshrc"
-    elif [ -n "${BASH_VERSION-}" ]; then
-        # We are in bash
-        # On macOS, .bash_profile is often used first, .bashrc sometimes sourced from it
-        [ -f "${HOME}/.bashrc" ] && source "${HOME}/.bashrc"
-        [ -f "${HOME}/.bash_profile" ] && source "${HOME}/.bash_profile"
-    else
-        # Unknown shell: you can fallback or warn
-        echo "Warning: Unknown shell, cannot source rc file automatically" >&2
-    fi
+    curl -fL https://raw.githubusercontent.com/noir-lang/noirup/main/install | bash
 fi
 
 step "Installing Noir v1.0.0-beta.25"
@@ -52,32 +39,20 @@ noirup --version 1.0.0-beta.25
 # -----------------------
 
 step "Installing Barretenberg"
+export PATH="$HOME/.bb:$PATH"
 if command -v bbup >/dev/null 2>&1; then
     echo "Barretenberg is already installed."
 else
-    step "Installing Barretenberg"
-    curl -L https://raw.githubusercontent.com/AztecProtocol/aztec-packages/refs/heads/next/barretenberg/bbup/install | bash
-    # Safe check for ZSH_VERSION or BASH_VERSION
-    if [ -n "${ZSH_VERSION-}" ]; then
-        # We are in zsh
-        [ -f "${HOME}/.zshrc" ] && source "${HOME}/.zshrc"
-    elif [ -n "${BASH_VERSION-}" ]; then
-        # We are in bash
-        # On macOS, .bash_profile is often used first, .bashrc sometimes sourced from it
-        [ -f "${HOME}/.bashrc" ] && source "${HOME}/.bashrc"
-        [ -f "${HOME}/.bash_profile" ] && source "${HOME}/.bash_profile"
-    else
-        # Unknown shell: you can fallback or warn
-        echo "Warning: Unknown shell, cannot source rc file automatically" >&2
-    fi
+    curl -fL https://raw.githubusercontent.com/AztecProtocol/aztec-packages/refs/heads/next/barretenberg/bbup/install | bash
 fi
 
 step "Installing Barretenberg v5.2.1"
 bbup -v 5.2.1
 
 # -----------------------
-# Run demo prover & verifier
+# Run benchmarks
 # -----------------------
-bash ../benchmark.sh --system-dir "${SCRIPT_DIR}"
+cd "$SCRIPT_DIR"
+cargo bench
 
 ok "All done!"

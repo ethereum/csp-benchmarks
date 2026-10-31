@@ -332,6 +332,16 @@ jobs:
         with:
           version: ${{ matrix.crate == 'provekit' && '1.0.0-beta.26' || '1.0.0-beta.19' }}
 
+      - name: Install Nargo for Barretenberg
+        if: ${{ matrix.crate == 'barretenberg' }}
+        uses: ./.github/actions/install-nargo
+        with:
+          version: "1.0.0-beta.25"
+
+      - name: Install Barretenberg
+        if: ${{ matrix.crate == 'barretenberg' }}
+        uses: ./.github/actions/install-bb
+
       - name: Install RISC0 toolchain
         if: ${{ contains(matrix.crate, 'risc0') }}
         uses: ./.github/actions/install-risc0

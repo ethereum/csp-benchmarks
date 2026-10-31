@@ -171,10 +171,6 @@ For `ligetron` with the `sha256` target, these are:
 - `ligetron/sha256_verify.sh`
 - `ligetron/sha256_measure.sh`
 
-For `barretenberg` with the `sha256` target, there is an extra script:
-
-- `barretenberg/sha256_prove_for_verify.sh`
-
 The root `./benchmark.sh` will invoke them in a fixed way via `hyperfine` and our helper scripts. Your scripts should follow the APIs below.
 
 ### 4) Add metadata to `bench_props.json`
@@ -265,9 +261,6 @@ https://github.com/privacy-ethereum/csp-benchmarks/blob/3ee2706d3dba930669fd8136
   - Should produce a proof artifact in a predictable location for size measurement (see measure API).
   - Should produce additional files for verification, if there is a need (e.g., verification key).
   - Exit non-zero on error.
-- Example (Barretenberg):
-
-https://github.com/privacy-ethereum/csp-benchmarks/blob/3ee2706d3dba930669fd813697576db1901649f8/barretenberg/sha256_prove_for_verify.sh#L19-L24
 
 #### API: `[target]_verify.sh`
 
@@ -333,12 +326,12 @@ Example (`circuit_sizes.json`):
 }
 ```
 
-- How to obtain the numbers is system‑specific. For example: Barretenberg/Noir can run `noir-profiler gates` and parse `Circuit size: N`; Ligetron can run a quiet proof and sum Stage 1 linear + quadratic constraints.
+- How to obtain the numbers is system‑specific. For example, Ligetron can run a quiet proof and sum Stage 1 linear + quadratic constraints.
 
 - Tip: use a single‑iteration run to quickly emit sizes without full benchmarking:
 
 ```bash
-BENCH_INPUT_PROFILE=full sh ./benchmark.sh --system-dir ./barretenberg --logging --quick --no-ram
+BENCH_INPUT_PROFILE=full bash ./benchmark.sh --system-dir ./ligetron --logging --quick --no-ram
 ```
 
 ### 7) File naming recap for non-Rust systems
@@ -348,13 +341,13 @@ BENCH_INPUT_PROFILE=full sh ./benchmark.sh --system-dir ./barretenberg --logging
 - Sizes (produced by your `[target]_measure.sh`): contains `proof_size` and `preprocessing_size` as shown above
 - Benchmark flags (optional): `bench_flags.json`
 
-Use `ligetron` and `barretenberg` as a reference implementation.
+Use `ligetron` as a reference implementation.
 
 ## Useful Commands For Non-Rust Systems
 
 Use `--logging` to enable logging, `--quick` to run only a single `hyperfine` iteration, and `--no-ram` to skip RAM measurement.
 
 ```bash
-# For example, for Noir/Barretenberg
-BENCH_INPUT_PROFILE=full sh ./benchmark.sh --system-dir ./barretenberg --logging --quick --no-ram
+# For example, for Ligetron
+BENCH_INPUT_PROFILE=full bash ./benchmark.sh --system-dir ./ligetron --logging --quick --no-ram
 ```

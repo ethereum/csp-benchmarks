@@ -50,6 +50,7 @@ impl FromStr for BenchTarget {
 
 #[derive(Clone, Copy, Debug)]
 pub enum ProvingSystem {
+    Barretenberg,
     Binius64,
     Expander,
     Plonky2,
@@ -72,6 +73,7 @@ pub enum ProvingSystem {
 impl ProvingSystem {
     pub fn as_str(&self) -> &'static str {
         match self {
+            ProvingSystem::Barretenberg => "barretenberg",
             ProvingSystem::Binius64 => "binius64",
             ProvingSystem::Expander => "expander",
             ProvingSystem::Plonky2 => "plonky2",
@@ -259,12 +261,22 @@ fn mem_report_filename(target: &str, size: usize, system: &str, feat: Option<&st
     }
 }
 
-fn input_sizes_for(target: BenchTarget) -> Vec<usize> {
-    match target {
+fn input_sizes_for(target: BenchTarget, system: ProvingSystem) -> Vec<usize> {
+    let mut sizes = match target {
         BenchTarget::Sha256 | BenchTarget::Keccak | BenchTarget::Blake3 => selected_byte_inputs(),
         BenchTarget::Ecdsa => vec![32],
         BenchTarget::Poseidon | BenchTarget::Poseidon2 => selected_field_element_inputs(),
-    }
+    };
+    sizes.retain(|&size| supports_input_size(target, system, size));
+    sizes
+}
+
+fn supports_input_size(target: BenchTarget, system: ProvingSystem, size: usize) -> bool {
+    // Barretenberg's native BLAKE3 black box supports inputs up to one 1024-byte chunk.
+    !matches!(
+        (system, target),
+        (ProvingSystem::Barretenberg, BenchTarget::Blake3)
+    ) || size <= 1024
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -303,7 +315,7 @@ pub fn run_benchmarks_fn<
     let target_str = cfg.target.as_str();
     let system_str = cfg.system.as_str();
 
-    for size in input_sizes_for(cfg.target) {
+    for size in input_sizes_for(cfg.target, cfg.system) {
         let prepared_context = prepare(size);
 
         let mut metrics = init_metrics(
@@ -398,7 +410,7 @@ pub fn run_benchmarks_with_state_fn<
     let target_str = cfg.target.as_str();
     let system_str = cfg.system.as_str();
 
-    for size in input_sizes_for(cfg.target) {
+    for size in input_sizes_for(cfg.target, cfg.system) {
         let prepared_context = prepare(size, shared);
 
         let mut metrics = init_metrics(
@@ -506,6 +518,30 @@ fn measure_ram(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn barretenberg_blake3_caps_only_its_native_chunk_size() {
+        assert!(supports_input_size(
+            BenchTarget::Blake3,
+            ProvingSystem::Barretenberg,
+            1024
+        ));
+        assert!(!supports_input_size(
+            BenchTarget::Blake3,
+            ProvingSystem::Barretenberg,
+            2048
+        ));
+        assert!(supports_input_size(
+            BenchTarget::Sha256,
+            ProvingSystem::Barretenberg,
+            2048
+        ));
+        assert!(supports_input_size(
+            BenchTarget::Blake3,
+            ProvingSystem::Risc0,
+            2048
+        ));
+    }
 
     #[test]
     fn init_metrics_uses_input_size_dependent_acceleration() {

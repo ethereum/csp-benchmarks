@@ -1,0 +1,65 @@
+[package]
+name = "barretenberg-bench"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { workspace = true }
+# Pin the PipeBackend API to the installed BB version.
+barretenberg-rs = { version = "=5.2.1", default-features = false, features = ["native"] }
+base64 = "0.22"
+clap = { workspace = true }
+flate2 = "1"
+serde_json = { workspace = true }
+utils = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "sha256_bench"
+harness = false
+
+[[bin]]
+name = "sha256_mem_barretenberg"
+path = "src/bin/sha256_mem.rs"
+
+[[bench]]
+name = "blake3_bench"
+harness = false
+
+[[bin]]
+name = "blake3_mem_barretenberg"
+path = "src/bin/blake3_mem.rs"
+
+[[bench]]
+name = "keccak_bench"
+harness = false
+
+[[bin]]
+name = "keccak_mem_barretenberg"
+path = "src/bin/keccak_mem.rs"
+
+[[bench]]
+name = "ecdsa_bench"
+harness = false
+
+[[bin]]
+name = "ecdsa_mem_barretenberg"
+path = "src/bin/ecdsa_mem.rs"
+
+[[bench]]
+name = "poseidon_bench"
+harness = false
+
+[[bin]]
+name = "poseidon_mem_barretenberg"
+path = "src/bin/poseidon_mem.rs"
+
+[[bench]]
+name = "poseidon2_bench"
+harness = false
+
+[[bin]]
+name = "poseidon2_mem_barretenberg"
+path = "src/bin/poseidon2_mem.rs"

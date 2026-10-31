@@ -37,13 +37,13 @@ Our future plans include running the benchmarks in a cloud device farm (Android 
     - Install Rust via `rustup` together with the toolchains used in [CI](./.github/workflows/rust_benchmarks_parallel.yml): `nightly-2026-03-14` (default), `1.98.1` for `miden`, and `nightly-2025-04-06` for `cairo-m`. Add the `llvm-tools`, `rustc-dev`, `rustfmt`, and `clippy` components so `cargo bench` matches the workflow in `.github/workflows/rust_benchmarks_parallel.yml`.
     - Stark-V guest compilation uses the root toolchain and requires the RISC-V target: `rustup target add riscv32im-unknown-none-elf --toolchain nightly-2026-03-14`.
     - Ensure `cargo`, `cmake`, and a recent `clang`/`lld` are available (the helper actions under [`.github/actions/install-llvm`](./.github/actions/install-llvm) show the expected setup). Install Homebrew packages `bash` and `jq`, plus `/usr/bin/time` for RAM measurements. Install the Hyperfine version specified in [`.hyperfine-version`](./.hyperfine-version) from its [release assets](https://github.com/sharkdp/hyperfine/releases) and ensure that binary is first on `PATH`.
-    - Install per-system toolchains as needed: the Ligero prover stack for `ligetron`, Noir version >=1.0.0-beta.13 for `barretenberg`, and the RISC Zero SDK. Each folder documents its own bootstrap script and the matching GitHub Action ([`install-risc0`](./.github/actions/install-risc0), etc.) can be used as a reference.
+    - Install per-system toolchains as needed: the Ligero prover stack for `ligetron`, Noir `1.0.0-beta.25` and Barretenberg `5.2.1` for `barretenberg`, and the RISC Zero SDK. Each folder documents its own bootstrap script and the matching GitHub Action ([`install-risc0`](./.github/actions/install-risc0), etc.) can be used as a reference.
     - For `spartan-whir`, install the pinned KoalaBear Circom fork, GMP, and nlohmann JSON headers as described in its [README](./spartan-whir/README.md).
 2.  **Run the benchmarks**
     - Build the workspace once: `cargo build --release --workspace`. Rust crates with separate Cargo roots, such as `miden/`, `provekit-groth16/`, `cairo-m/`, and `rookie-numbers/`, build from inside their own directories.
     - For Rust benchmarks, follow the setup and commands in each crate's README. Run Cargo from the crate directory so it loads `.cargo/config.toml`.
     - Use `BENCH_INPUT_PROFILE=reduced` to run with a reduced set of input sizes.
-    - For non-Rust systems, build the utilities crate (`cargo build --release -p utils`) and invoke `benchmark.sh`, e.g. `BENCH_INPUT_PROFILE=full bash ./benchmark.sh --system-dir ./barretenberg --logging --quick` (see [sh_benchmarks_parallel.yml](./.github/workflows/sh_benchmarks_parallel.yml)).
+    - For non-Rust systems, build the utilities crate (`cargo build --release -p utils`) and invoke `benchmark.sh`, e.g. `BENCH_INPUT_PROFILE=full bash ./benchmark.sh --system-dir ./ligetron --logging --quick` (see [sh_benchmarks_parallel.yml](./.github/workflows/sh_benchmarks_parallel.yml)).
 
 ## Run a targeted Rust benchmark in GitHub Actions
 
@@ -68,8 +68,8 @@ Notes:
 - `mobile/` – mobile benchmarks for Android and iOS.
 - `benchmark.sh` / `measure_mem_avg.sh` – orchestration scripts for non-Rust systems and RAM measurement.
 - `results/` – storage for published benchmark results.
-- Rust proving system and zkVM crates such as `binius64/`, `plonky2/`, `provekit/`, etc., each exposing a Criterion bench target registered through the shared harness. Some crates have separate Cargo roots and build from their own directories.
-- Non-Rust proving system folders (`barretenberg/`, `ligetron/`, etc.) that contain the shell scripts required by `benchmark.sh`.
+- Rust proving system and zkVM crates such as `barretenberg/`, `binius64/`, `plonky2/`, `provekit/`, etc., each exposing a Criterion bench target registered through the shared harness. Some crates have separate Cargo roots and build from their own directories.
+- Non-Rust proving system folders such as `ligetron/` that contain the shell scripts required by `benchmark.sh`.
 
 `polyhedra-expander/` is retained, with workspace builds and benchmark CI disabled until upstream soundness issues are resolved. See the exclusion comment in [`Cargo.toml`](./Cargo.toml).
 
