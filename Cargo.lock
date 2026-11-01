@@ -6610,7 +6610,7 @@ dependencies = [
 [[package]]
 name = "plonky2"
 version = "1.1.0"
-source = "git+https://github.com/robknight/plonky2?rev=85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1#85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1"
+source = "git+https://github.com/robknight/plonky2?rev=52ab658ec2f5f0eeb6e7a3e0511b6525813534ac#52ab658ec2f5f0eeb6e7a3e0511b6525813534ac"
 dependencies = [
  "ahash",
  "anyhow",
@@ -6624,9 +6624,9 @@ dependencies = [
  "log",
  "naga",
  "num",
- "plonky2_field 1.0.0 (git+https://github.com/robknight/plonky2?rev=85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1)",
- "plonky2_maybe_rayon 1.0.0 (git+https://github.com/robknight/plonky2?rev=85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1)",
- "plonky2_util 1.0.0 (git+https://github.com/robknight/plonky2?rev=85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1)",
+ "plonky2_field 1.0.0 (git+https://github.com/robknight/plonky2?rev=52ab658ec2f5f0eeb6e7a3e0511b6525813534ac)",
+ "plonky2_maybe_rayon 1.0.0 (git+https://github.com/robknight/plonky2?rev=52ab658ec2f5f0eeb6e7a3e0511b6525813534ac)",
+ "plonky2_util 1.0.0 (git+https://github.com/robknight/plonky2?rev=52ab658ec2f5f0eeb6e7a3e0511b6525813534ac)",
  "pollster",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
@@ -6693,12 +6693,12 @@ dependencies = [
 [[package]]
 name = "plonky2_field"
 version = "1.0.0"
-source = "git+https://github.com/robknight/plonky2?rev=85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1#85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1"
+source = "git+https://github.com/robknight/plonky2?rev=52ab658ec2f5f0eeb6e7a3e0511b6525813534ac#52ab658ec2f5f0eeb6e7a3e0511b6525813534ac"
 dependencies = [
  "anyhow",
  "itertools 0.11.0",
  "num",
- "plonky2_util 1.0.0 (git+https://github.com/robknight/plonky2?rev=85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1)",
+ "plonky2_util 1.0.0 (git+https://github.com/robknight/plonky2?rev=52ab658ec2f5f0eeb6e7a3e0511b6525813534ac)",
  "rand 0.8.5",
  "serde",
  "static_assertions",
@@ -6716,8 +6716,8 @@ dependencies = [
  "itertools 0.13.0",
  "log",
  "num",
- "plonky2 1.1.0 (git+https://github.com/robknight/plonky2?rev=85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1)",
- "plonky2_u32 0.1.0 (git+https://github.com/robknight/plonky2-u32?rev=80b832b5ebb9d2cb6fa259c5a1f99d8028f38683)",
+ "plonky2 1.1.0 (git+https://github.com/robknight/plonky2?rev=52ab658ec2f5f0eeb6e7a3e0511b6525813534ac)",
+ "plonky2_u32 0.1.0 (git+https://github.com/robknight/plonky2-u32?rev=fa7200f1d527c677f2a0f2b727daee142dcdf1f3)",
  "rand 0.8.5",
  "sha2 0.10.9",
  "utils",
@@ -6735,7 +6735,7 @@ dependencies = [
 [[package]]
 name = "plonky2_maybe_rayon"
 version = "1.0.0"
-source = "git+https://github.com/robknight/plonky2?rev=85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1#85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1"
+source = "git+https://github.com/robknight/plonky2?rev=52ab658ec2f5f0eeb6e7a3e0511b6525813534ac#52ab658ec2f5f0eeb6e7a3e0511b6525813534ac"
 dependencies = [
  "rayon",
 ]
@@ -6743,13 +6743,13 @@ dependencies = [
 [[package]]
 name = "plonky2_u32"
 version = "0.1.0"
-source = "git+https://github.com/robknight/plonky2-u32?rev=80b832b5ebb9d2cb6fa259c5a1f99d8028f38683#80b832b5ebb9d2cb6fa259c5a1f99d8028f38683"
+source = "git+https://github.com/robknight/plonky2-u32?rev=fa7200f1d527c677f2a0f2b727daee142dcdf1f3#fa7200f1d527c677f2a0f2b727daee142dcdf1f3"
 dependencies = [
  "anyhow",
  "itertools 0.10.5",
  "log",
  "num",
- "plonky2 1.1.0 (git+https://github.com/robknight/plonky2?rev=85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1)",
+ "plonky2 1.1.0 (git+https://github.com/robknight/plonky2?rev=52ab658ec2f5f0eeb6e7a3e0511b6525813534ac)",
 ]
 
 [[package]]
@@ -6773,7 +6773,7 @@ checksum = "c32c137808ca984ab2458b612b7eb0462d853ee041a3136e83d54b96074c7610"
 [[package]]
 name = "plonky2_util"
 version = "1.0.0"
-source = "git+https://github.com/robknight/plonky2?rev=85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1#85a5624e8fe4e0315fa01b8b8af78a93fc17ebe1"
+source = "git+https://github.com/robknight/plonky2?rev=52ab658ec2f5f0eeb6e7a3e0511b6525813534ac#52ab658ec2f5f0eeb6e7a3e0511b6525813534ac"
 
 [[package]]
 name = "plotters"
