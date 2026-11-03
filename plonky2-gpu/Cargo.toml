@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-plonky2 = { git = "https://github.com/robknight/plonky2", rev = "52ab658ec2f5f0eeb6e7a3e0511b6525813534ac", features = ["gpu"] }
-plonky2_u32 = { git = "https://github.com/robknight/plonky2-u32", rev = "fa7200f1d527c677f2a0f2b727daee142dcdf1f3" }
+plonky2 = { git = "https://github.com/robknight/plonky2", rev = "9838da766781a6c4ccc0d8f585f6fe5e7c4cee2d", features = ["gpu"] }
+plonky2_u32 = { git = "https://github.com/robknight/plonky2-u32", rev = "d26acf6a113a3d8081e13eccd974bd0cae2df4ce" }
 utils = { path = "../utils" }
 anyhow = "1.0"
 itertools = "0.13"
