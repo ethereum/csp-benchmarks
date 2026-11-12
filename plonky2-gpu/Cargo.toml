@@ -11,7 +11,6 @@ anyhow = "1.0"
 itertools = "0.13"
 log = "0.4"
 sha2 = "0.10"
-env_logger = "0.10"
 rand = "0.8"
 criterion = "0.5"
 clap = { version = "4.5", features = ["derive"] }

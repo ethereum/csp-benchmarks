@@ -8,7 +8,6 @@ struct Args {
 }
 
 fn main() {
-    env_logger::init();
     let args = Args::parse();
     let (data, pw, _, _) = sha256_prepare(args.input_size);
     let _proof = prove(&data, pw);

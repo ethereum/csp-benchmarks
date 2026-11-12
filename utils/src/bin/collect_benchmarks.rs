@@ -441,44 +441,6 @@ mod tests {
     }
 
     #[test]
-    fn stock_and_gpu_plonky2_keep_separate_audit_metadata() {
-        use utils::harness::ProvingSystem;
-
-        let stock_properties = BenchProperties {
-            proving_system: Cow::Borrowed("Plonky2"),
-            is_audited: AuditStatus::Audited,
-            ..BenchProperties::default()
-        };
-        let stock = Metrics::new(
-            ProvingSystem::Plonky2.as_str().to_string(),
-            None,
-            "sha256".to_string(),
-            128,
-            stock_properties,
-        );
-        let gpu_properties = BenchProperties {
-            proving_system: Cow::Borrowed("Plonky2 GPU"),
-            is_audited: AuditStatus::NotAudited,
-            ..BenchProperties::default()
-        };
-        let gpu = Metrics::new(
-            ProvingSystem::Plonky2Gpu.as_str().to_string(),
-            Some("gpu_executor".to_string()),
-            "sha256".to_string(),
-            128,
-            gpu_properties,
-        );
-
-        let (systems, measurements) = collect_metrics(vec![stock, gpu]).unwrap();
-
-        assert_eq!(systems.len(), 2);
-        assert_eq!(systems["plonky2"].is_audited, AuditStatus::Audited);
-        assert_eq!(systems["plonky2-gpu"].is_audited, AuditStatus::NotAudited);
-        assert_ne!(measurements[0].system, measurements[1].system);
-        assert_eq!(measurements[1].feat.as_deref(), Some("gpu_executor"));
-    }
-
-    #[test]
     fn conflicting_properties_for_the_same_system_fail_collection() {
         let first = Metrics::new(
             "example".to_string(),

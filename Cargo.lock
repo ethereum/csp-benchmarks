@@ -6712,7 +6712,6 @@ dependencies = [
  "anyhow",
  "clap",
  "criterion",
- "env_logger 0.10.2",
  "itertools 0.13.0",
  "log",
  "num",

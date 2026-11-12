@@ -45,8 +45,7 @@ The adapter requires a hardware GPU and fails if GPU initialization is disabled
 or unavailable. It preserves the fork's automatic GPU/hybrid routing and witness
 placement; `PLONKY2_GPU_*` settings can select the supported backend, adapter and
 routing. The new u32 witness operations execute on the CPU and feed GPU proving.
-Some phases are intentionally on the CPU. Set `RUST_LOG=plonky2::gpu=info` to
-record the chosen adapter and proof paths. Executor compilation/installation is
+Some phases are intentionally on the CPU. Executor compilation/installation is
 mandatory and `WitnessFallback::Error` is set explicitly, regardless of the
 process's fallback preference. Use identical runtime settings for the benchmark
 and its inherited memory subprocess.
