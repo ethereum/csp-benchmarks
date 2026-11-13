@@ -70,7 +70,7 @@ Notes:
 - `results/` – storage for published benchmark results.
 - The [`plonky2-gpu/`](plonky2-gpu/README.md) variant benchmarks the GPU fork with compiled witness generation, alongside the stock `plonky2/` adapter. It is built as a workspace member.
 - Rust proving system and zkVM crates such as `barretenberg/`, `binius64/`, `plonky2/`, `provekit/`, etc., each exposing a Criterion bench target registered through the shared harness. Some crates have separate Cargo roots and build from their own directories.
-- Non-Rust proving system folders such as `ligetron/` that contain the shell scripts required by `benchmark.sh`.
+- Non-Rust proving system folders such as `gnark/` and `ligetron/` that contain the shell scripts required by `benchmark.sh`.
 
 `polyhedra-expander/` is retained, with workspace builds and benchmark CI disabled until upstream soundness issues are resolved. See the exclusion comment in [`Cargo.toml`](./Cargo.toml).
 
