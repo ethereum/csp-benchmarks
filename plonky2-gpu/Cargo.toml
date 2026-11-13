@@ -1,0 +1,41 @@
+[package]
+name = "plonky2_gpu_circuits"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+plonky2 = { git = "https://github.com/robknight/plonky2", rev = "9838da766781a6c4ccc0d8f585f6fe5e7c4cee2d", features = ["gpu"] }
+plonky2_u32 = { git = "https://github.com/robknight/plonky2-u32", rev = "d26acf6a113a3d8081e13eccd974bd0cae2df4ce" }
+utils = { path = "../utils" }
+anyhow = "1.0"
+itertools = "0.13"
+log = "0.4"
+sha2 = "0.10"
+rand = "0.8"
+criterion = "0.5"
+clap = { version = "4.5", features = ["derive"] }
+num = "0.4"
+
+[[bench]]
+name = "sha256"
+harness = false
+
+[[bench]]
+name = "keccak"
+harness = false
+
+[[bench]]
+name = "poseidon"
+harness = false
+
+[[bin]]
+name = "sha256_mem_plonky2_gpu"
+path = "src/bin/sha256_mem.rs"
+
+[[bin]]
+name = "keccak_mem_plonky2_gpu"
+path = "src/bin/keccak_mem.rs"
+
+[[bin]]
+name = "poseidon_mem_plonky2_gpu"
+path = "src/bin/poseidon_mem.rs"

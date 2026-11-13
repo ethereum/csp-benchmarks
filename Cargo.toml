@@ -5,6 +5,7 @@ members = [
     "binius64",
     "flock",
     "plonky2",
+    "plonky2-gpu",
     "provekit",
     "circom",
     "halo2",

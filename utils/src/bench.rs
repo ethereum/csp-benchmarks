@@ -221,7 +221,7 @@ pub fn write_json_metrics_file(output_path: &str, metrics: &Metrics) {
     std::fs::write(output_path, json).unwrap();
 }
 
-pub fn compile_binary(binary_name: &str) {
+pub fn compile_binary(binary_name: &str) -> std::path::PathBuf {
     let compile_output = Command::new("cargo")
         .arg("build")
         .arg("--release")
@@ -237,6 +237,27 @@ pub fn compile_binary(binary_name: &str) {
         String::from_utf8_lossy(&compile_output.stdout),
         String::from_utf8_lossy(&compile_output.stderr)
     );
+
+    // Excluded workspaces and CARGO_TARGET_DIR can place binaries elsewhere.
+    // Ask Cargo for the effective path rather than assuming ../target.
+    let metadata = Command::new("cargo")
+        .args(["metadata", "--format-version=1", "--no-deps"])
+        .output()
+        .expect("failed to locate compiled memory binary");
+    assert!(
+        metadata.status.success(),
+        "cargo metadata failed: {}",
+        String::from_utf8_lossy(&metadata.stderr)
+    );
+    let metadata: serde_json::Value =
+        serde_json::from_slice(&metadata.stdout).expect("invalid cargo metadata");
+    std::path::PathBuf::from(
+        metadata["target_directory"]
+            .as_str()
+            .expect("cargo metadata must include target_directory"),
+    )
+    .join("release")
+    .join(format!("{binary_name}{}", std::env::consts::EXE_SUFFIX))
 }
 
 #[cfg(test)]
