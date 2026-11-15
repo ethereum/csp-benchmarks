@@ -121,12 +121,12 @@ runs:
       uses: actions/cache@v4
       with:
         path: emsdk-cache
-        key: emsdk-syslibs-latest-${{ runner.os }}
+        key: emsdk-syslibs-6.0.13-${{ runner.os }}
 
     - name: Setup Emscripten (emsdk)
       uses: mymindstorm/setup-emsdk@v14
       with:
-        version: latest
+        version: 6.0.13
         update: true
         actions-cache-folder: emsdk-cache
 
@@ -140,7 +140,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: ${{ inputs.ligero_path }}/sdk/cpp/build
-        key: sdk-build-${{ runner.os }}-${{ hashFiles(format('{0}/sdk/cpp/CMakeLists.txt', inputs.ligero_path)) }}-${{ hashFiles(format('{0}/sdk/cpp/src/**', inputs.ligero_path)) }}
+        key: sdk-build-emsdk-6.0.13-${{ runner.os }}-${{ hashFiles(format('{0}/sdk/cpp/CMakeLists.txt', inputs.ligero_path)) }}-${{ hashFiles(format('{0}/sdk/cpp/src/**', inputs.ligero_path)) }}
 
     - name: Reset SDK CMake cache (avoid stale EMSDK toolchain paths)
       shell: bash
