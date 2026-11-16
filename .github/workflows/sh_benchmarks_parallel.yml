@@ -71,6 +71,7 @@ jobs:
 
           # ─── 1. list of top‑level folders to watch ────────────
           FOLDERS=(
+            gnark
             ligetron
           )
 
@@ -114,6 +115,21 @@ jobs:
       - name: Update bash under macOS for mapfile
         run: |
           brew install bash
+
+      - name: Set up Go for gnark
+        if: ${{ matrix.folder == 'gnark' }}
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: gnark/go.mod
+          cache-dependency-path: gnark/go.sum
+
+      - name: Test and build gnark benchmarks
+        if: ${{ matrix.folder == 'gnark' }}
+        working-directory: gnark
+        run: |
+          go test ./...
+          go vet ./...
+          go build -o gnark-bench .
 
       - name: Install pinned WABT (only when folder is ligetron)
         if: ${{ matrix.folder == 'ligetron' }}

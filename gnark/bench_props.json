@@ -1,0 +1,12 @@
+{
+  "proving_system": "Groth16",
+  "is_zkvm": false,
+  "field_curve": "Bn254",
+  "iop": "Groth16",
+  "arithm": "R1CS",
+  "is_zk": true,
+  "security_bits": 100,
+  "is_pq": false,
+  "is_maintained": true,
+  "is_audited": "partially_audited"
+}
