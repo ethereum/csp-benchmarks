@@ -1,7 +1,8 @@
 use plonky2_circuits::PLONKY2_BENCH_PROPERTIES;
 use plonky2_circuits::bench::{
-    compute_proof_size, compute_u32_preprocessing_size, prove, sha256_prepare, verify_proof,
+    compute_proof_size, compute_u32_preprocessing_size, prove, verify_proof,
 };
+use plonky2_circuits::prover_parameters::sha256_prepare;
 use utils::harness::ProvingSystem;
 
 utils::define_benchmark_harness!(

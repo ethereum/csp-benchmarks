@@ -38,6 +38,10 @@ BENCH_INPUT_PROFILE=reduced cargo bench -p plonky2_circuits --bench ecdsa
 
 Use `BENCH_INPUT_PROFILE=full` for the complete variable-size sweep.
 
+## Prover parameters
+
+The CPU Plonky2 benchmarks use prover parameters selected for each circuit and input size. SHA-256, Keccak-256, and Poseidon use settings fine-tuned for proving time and peak RAM. The secp256k1 ECDSA benchmark uses the standard ECC configuration with zero-knowledge blinding. See the [measured Pareto frontiers](prover-parameter-pareto.svg).
+
 ## Circuit details
 
 The Poseidon benchmark uses Plonky2's built-in Poseidon operation and records

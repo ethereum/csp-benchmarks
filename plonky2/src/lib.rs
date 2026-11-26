@@ -4,6 +4,7 @@ use utils::harness::{AuditStatus, BenchProperties};
 pub mod bench;
 pub mod ecdsa;
 pub mod keccak256;
+pub mod prover_parameters;
 pub mod sha256;
 
 pub const PLONKY2_BENCH_PROPERTIES: BenchProperties = BenchProperties {
