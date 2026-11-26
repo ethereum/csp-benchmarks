@@ -1,5 +1,6 @@
 use clap::Parser;
-use plonky2_circuits::bench::{poseidon_prepare, prove};
+use plonky2_circuits::bench::prove;
+use plonky2_circuits::prover_parameters::poseidon_prepare;
 
 #[derive(Parser, Debug)]
 struct Args {

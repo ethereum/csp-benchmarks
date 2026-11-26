@@ -1,7 +1,8 @@
 use plonky2::plonk::config::PoseidonGoldilocksConfig;
 use plonky2::util::serialization::{DefaultGateSerializer, DefaultGeneratorSerializer};
 use plonky2_circuits::PLONKY2_BENCH_PROPERTIES;
-use plonky2_circuits::bench::{compute_proof_size, poseidon_prepare, prove, verify_proof};
+use plonky2_circuits::bench::{compute_proof_size, prove, verify_proof};
+use plonky2_circuits::prover_parameters::poseidon_prepare;
 use utils::harness::ProvingSystem;
 
 const D: usize = 2;

@@ -1,6 +1,7 @@
 use plonky2::{
     field::goldilocks_field::GoldilocksField,
     field::types::Field,
+    gates::arithmetic_base::ArithmeticGate,
     hash::poseidon::PoseidonHash,
     iop::witness::{PartialWitness, WitnessWrite},
     plonk::{
@@ -33,16 +34,28 @@ pub fn prove(
 }
 
 pub fn sha256_prepare(input_size: usize) -> Prepared {
-    let (msg, hash) = utils::generate_sha256_input(input_size);
+    sha256_prepare_with_config(input_size, CircuitConfig::standard_recursion_zk_config())
+}
 
+pub(crate) fn sha256_prepare_with_config(input_size: usize, config: CircuitConfig) -> Prepared {
+    let (msg, hash) = utils::generate_sha256_input(input_size);
     let msg_bits = array_to_bits(&msg);
     let len = msg.len() * 8;
     println!("block count: {}", (len + 65).div_ceil(512));
     const D: usize = 2;
     type C = PoseidonGoldilocksConfig;
     type F = <C as GenericConfig<D>>::F;
-    let mut builder = CircuitBuilder::<F, D>::new(CircuitConfig::standard_recursion_zk_config());
+    // With room for 31 arithmetic operations, le_sum packs a 32-bit word
+    // using arithmetic instead of a BaseSum gate that constrains its bits.
+    let needs_booleanity_checks =
+        ArithmeticGate::new_from_config(&config).num_ops >= u32::BITS as usize - 1;
+    let mut builder = CircuitBuilder::<F, D>::new(config);
     let targets = make_circuits(&mut builder, len as u64);
+    if needs_booleanity_checks {
+        for &bit in targets.message.iter().take(len) {
+            builder.assert_bool(bit);
+        }
+    }
     let mut pw = PartialWitness::new();
 
     for (i, msg_bit) in msg_bits.iter().enumerate().take(len) {
@@ -67,13 +80,17 @@ pub fn sha256_prepare(input_size: usize) -> Prepared {
 }
 
 pub fn poseidon_prepare(input_size: usize) -> Prepared {
+    poseidon_prepare_with_config(input_size, CircuitConfig::standard_recursion_zk_config())
+}
+
+pub(crate) fn poseidon_prepare_with_config(input_size: usize, config: CircuitConfig) -> Prepared {
     let inputs = utils::generate_poseidon_input_goldilocks(input_size);
     let input_fields: Vec<_> = inputs
         .iter()
         .map(|input| F::from_canonical_u64(*input))
         .collect();
     let expected_public_inputs = PoseidonHash::hash_no_pad(&input_fields).to_vec();
-    let mut builder = CircuitBuilder::<F, D>::new(CircuitConfig::standard_recursion_zk_config());
+    let mut builder = CircuitBuilder::<F, D>::new(config);
 
     let input_targets: Vec<_> = (0..input_size)
         .map(|_| builder.add_virtual_target())
@@ -97,6 +114,10 @@ pub fn poseidon_prepare(input_size: usize) -> Prepared {
 }
 
 pub fn keccak256_prepare(input_size: usize) -> Prepared {
+    keccak256_prepare_with_config(input_size, CircuitConfig::standard_recursion_zk_config())
+}
+
+pub(crate) fn keccak256_prepare_with_config(input_size: usize, config: CircuitConfig) -> Prepared {
     let (msg, hash) = utils::generate_keccak_input(input_size);
 
     let msg_bits = array_to_bits_lsb(&msg);
@@ -104,7 +125,7 @@ pub fn keccak256_prepare(input_size: usize) -> Prepared {
     const D: usize = 2;
     type C = PoseidonGoldilocksConfig;
     type F = <C as GenericConfig<D>>::F;
-    let mut builder = CircuitBuilder::<F, D>::new(CircuitConfig::standard_recursion_zk_config());
+    let mut builder = CircuitBuilder::<F, D>::new(config);
 
     let mut input_targets = vec![];
     for _ in 0..len {
